@@ -39,8 +39,8 @@ zergraph is currently in **early alpha development**. The initial commit lays th
 
 **Contributing:**
 
-[To be defined - for now, internal team development.]
+TBD
 
 **License:**
 
-[Choose a license - e.g., MIT License or Apache 2.0 License] 
+Proprietary. Not open source. Not for public use. All rights reserved @bbopen
