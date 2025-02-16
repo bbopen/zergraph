@@ -1,0 +1,9 @@
+[package]
+name = "zergraph"
+version = "0.1.0"
+authors = ["Your Name <you@example.com>"]
+edition = "2021"
+description = "Adaptive Distributed Graph Database built with Rust."
+license = "MIT"
+
+[dependencies] 
