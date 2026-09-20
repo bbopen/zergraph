@@ -2,9 +2,9 @@
 
 Zergraph is a Rust property graph that merges changes from independent writers.
 Store entities, labeled relationships, and JSON properties. Each writer edits a
-local graph and exchanges complete snapshots with other writers.
+local graph and exchanges snapshots or incremental deltas with other writers.
 
-The core has 667 lines in three Rust modules and three direct runtime dependencies.
+The core has 868 lines in four Rust modules and three direct runtime dependencies.
 Your application provides storage and transport. Zergraph starts no background tasks.
 
 ## Quick start
@@ -64,6 +64,26 @@ fn main() -> Result<(), zergraph::Error> {
 The program exits without output when both writers have the same state and the
 restored graph contains the test result.
 
+## Incremental exchange
+
+After a peer receives a full snapshot, retain the checkpoint that matches that
+send. Build later deltas from that acknowledged checkpoint:
+
+```rust
+// Capture before building the delta. Do not replace this with a later checkpoint.
+let candidate = writer.checkpoint();
+let bytes = writer.delta_since(&acknowledged).to_bytes()?;
+let changes = peer.apply_delta_with_changes(&zergraph::Delta::from_bytes(&bytes)?)?;
+// Promote only after this message was applied and acknowledged.
+acknowledged = candidate;
+```
+
+The application sends the bytes and acknowledgments. `changes` lists node IDs and
+edge keys to reread, including edges affected by node removal or revival. Retries
+and reordered delivery are safe. Checkpoints store stamps for every retained
+register, and delta generation scans the graph. See the
+[work-board recipe](docs/COOKBOOK.md#sync-a-work-board-after-bootstrap) for a complete example.
+
 ## Documentation
 
 | You want to... | Read |
@@ -76,13 +96,13 @@ restored graph contains the test result.
 ## When to choose Zergraph
 
 Use Zergraph when independent writers need to merge relationships and properties,
-and each graph fits in memory. Every exchange sends a complete snapshot, including
-deleted records. This works best for a graph with a limited scope, such as one
-mission, project, or experiment.
+and each graph fits in memory. Bootstrap and back up with complete snapshots. Use
+deltas to send changed registers since an acknowledged checkpoint. Both preserve
+deletion metadata. Keep each graph scoped to one mission, project, or experiment.
 
 | Main requirement | Consider |
 |---|---|
-| An in-process Rust graph with LWW merge and snapshot exchange | Zergraph |
+| An in-process Rust graph with LWW merge, snapshots, and sparse deltas | Zergraph |
 | A graph CRDT with schema, delta sync, and persistence | [Silk](https://github.com/Kieleth/silk-graph), Rust and Python |
 | An operation-based two-phase graph CRDT | [crdt-graph](https://github.com/bkbkb-net/crdt-graph), Rust |
 | Local graph algorithms | [petgraph](https://github.com/petgraph/petgraph), Rust, or [NetworkX](https://networkx.org/), Python |
@@ -98,11 +118,21 @@ comparison of documented features. We have not benchmarked Zergraph against thes
 
 ## Measured performance
 
+The incremental-sync benchmark uses 1,024 nodes and 4,096 edges on Apple M3.
+A one-property edit encodes to 294 bytes, compared with a 1,746,030-byte full
+snapshot. Delta generation takes 0.176 ms; capturing a checkpoint takes 0.493 ms.
+Generation scans retained state. Checkpoints use memory per peer. See
+[Sync performance](docs/SYNC_PERFORMANCE.md) for the fixture, all timings, and
+checkpoint memory measurements.
+
+The following table records the earlier snapshot-core optimization. Its fixture
+uses different property values from the sync benchmark.
+
 The benchmark used an Apple M3 and a release build with 1,024 nodes and 4,096 edges.
 Each node had four outgoing edges. Results are medians of three process medians,
 with seven samples per process.
 
-| Operation | Before optimization | Current core |
+| Operation | Before optimization | Optimized snapshot core |
 |---|---:|---:|
 | Outgoing neighborhood | 446 µs | 0.524 µs |
 | Incoming neighborhood | 451 µs | 0.749 µs |
@@ -156,7 +186,7 @@ cargo clippy --all-targets --locked -- -D warnings
 ```
 
 Keep `target/` between edits. CI also checks `serde_json/preserve_order`, runs all
-five examples, and verifies the package. See [Contributing](CONTRIBUTING.md) for the
+six examples, and verifies the package. See [Contributing](CONTRIBUTING.md) for the
 release commands and [provenance](docs/PROVENANCE.md) for the earlier implementations.
 
 ## Distribution

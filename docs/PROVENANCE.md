@@ -33,5 +33,11 @@ Ontology, ingestion, user interfaces, storage backends, authentication, network
 transport, and deployment services remain outside the crate. Those experiments are
 still available in their original repositories.
 
+The incremental-sync review checked the same revisions. `zergraph_dev` merges
+whole node and fabric state. `zerontology` graph events have no original writer
+stamps, and replay assigns new local stamps. Neither supplies the delta protocol
+used here. Zergraph deltas preserve the stamps of selected registers and compare
+exact per-register checkpoints.
+
 The [alternatives guide](ALTERNATIVES.md) lists the projects used for comparison.
 Those projects are not dependencies or copied implementations.

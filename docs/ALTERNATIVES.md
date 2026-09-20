@@ -1,7 +1,7 @@
 # Choosing a library
 
 Zergraph fits Rust applications that need relationships, independent edits, and
-complete snapshot exchange. The application must store the data and move it between
+snapshot or incremental delta exchange. The application must store the data and move it between
 writers. Each graph must fit in memory.
 
 Other projects cover different requirements. Their CRDT models, deletion rules,
@@ -27,11 +27,12 @@ and formats are not interchangeable.
 ## What Zergraph keeps small
 
 Zergraph has one node type, one edge key, JSON properties, and explicit snapshot
-operations. The application chooses the meaning of each ID, label, and property.
+and delta operations. The application chooses the meaning of each ID, label, and property.
 This avoids adding a schema system or domain framework to the crate.
 
-That choice has costs. Complete snapshots include deleted records. Synchronization
-work grows with retained state. Queries cover lookup and iteration, including
+That choice has costs. Complete snapshots include deleted records. Per-peer
+checkpoints retain register stamps, and delta generation scans retained state.
+Deltas reduce the transferred data when few registers change. Queries cover lookup and iteration, including
 incoming and outgoing edges. A document CRDT is a better starting point for text
 editing; a graph database is a better starting point for server queries.
 

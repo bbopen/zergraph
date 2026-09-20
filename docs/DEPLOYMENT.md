@@ -58,6 +58,11 @@ A receiver can hold the live graph, incoming bytes, a decoded snapshot, and outg
 bytes at the same time. Snapshot creation copies state. Decoding allocates state,
 and restore builds the incoming-edge index.
 
+Incremental exchange also keeps one payload-free checkpoint per peer. Each
+checkpoint stores all known entity and property stamps. Its cost grows with the
+number of retained registers and peers. Budget this separately from the live graph;
+see [sync measurements](SYNC_PERFORMANCE.md).
+
 Memory grows with distinct entities and property names. Deleted records remain in
 snapshots. Repeated writes replace a register's value, but deletion does not reclaim
 its storage. Long IDs, large JSON values, and dense graphs need their own measurements.
@@ -81,6 +86,9 @@ The totals are:
 100 × 1,619,049 bytes ÷ 60 seconds ≈ 2.70 MB/s outgoing per worker
 1,000 workers × 2.70 MB/s           ≈ 2.70 GB/s aggregate outgoing
 ```
+
+These bandwidth numbers assume full snapshots. Deltas can reduce them when few
+registers change; they do not remove bootstrap, retry, or checkpoint costs.
 
 The 64 MiB budget needs workload testing. Each extra recipient adds another snapshot
 send. Receiving updates also costs bandwidth and decoding and merge time. The worker
