@@ -83,5 +83,5 @@ where the reader first encounters them.
 
 The library is dual-licensed under MIT or Apache-2.0; see [LICENSE.md](LICENSE.md).
 Registry publication remains disabled.
-Releases use version tags and GitHub release assets in this private repository.
+Releases use version tags and GitHub release assets.
 The [changelog](CHANGELOG.md) lists each release's changes.
