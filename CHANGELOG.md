@@ -2,6 +2,10 @@
 
 ## 0.1.0 — private release candidate
 
+- Add a documentation-first README, nine cookbook recipes, and runnable lineage/repair examples.
+- Document a sourced hardware envelope and a worked example of application-level cluster composition.
+- Compare graph, CRDT, database, and robotics alternatives in Rust, Python, JavaScript, Go, C/C++, and service ecosystems.
+
 - Add measured outgoing ranges, an incoming-edge identity index, and merge plans that apply only changed records after complete validation.
 - Encode snapshots from borrowed state; normalize JSON values once at ingress.
 - Add an opt-in dependency-free benchmark harness and a parallel four-robot reconciliation example.
