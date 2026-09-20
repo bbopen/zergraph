@@ -24,4 +24,6 @@ jobs:
       - run: cargo run --locked --example evidence
       - run: cargo run --locked --example field_inspection
       - run: cargo run --locked --example swarm
+      - run: cargo run --locked --example lineage
+      - run: cargo run --locked --example repair
       - run: cargo package --locked
