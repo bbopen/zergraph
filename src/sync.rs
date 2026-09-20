@@ -145,10 +145,15 @@ fn difference<K: Ord + Clone>(
     state: &BTreeMap<K, Entity>,
     known: &BTreeMap<K, Known>,
 ) -> BTreeMap<K, Entity> {
+    let mut aligned = known.iter();
     state
         .iter()
         .filter_map(|(key, entity)| {
-            let old = known.get(key);
+            let old = aligned
+                .next()
+                .filter(|(k, _)| *k == key)
+                .map(|(_, entity)| entity)
+                .or_else(|| known.get(key));
             let properties: BTreeMap<_, _> = entity
                 .properties
                 .iter()

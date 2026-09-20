@@ -226,6 +226,26 @@ fn restored_writer_can_continue_incremental_exchange() {
     assert_eq!(source.snapshot(), restored.snapshot());
 }
 
+#[test]
+fn delta_comparison_handles_shifted_and_missing_checkpoint_keys() {
+    let (mut source, _) = pair();
+    let mut peer = source.fork();
+    peer.add_node("0-peer-only").unwrap();
+    let checkpoint = peer.checkpoint();
+    source.add_node("00-source-only").unwrap();
+    source.add_node("z-source-only").unwrap();
+    source
+        .add_edge(EdgeKey::new("00-source-only", "link", "a"))
+        .unwrap();
+    source.set_node_property("b", "new", 7).unwrap();
+    let mut expected = peer.fork();
+    expected.merge(&source.snapshot()).unwrap();
+    peer.apply_delta(&transport(&source.delta_since(&checkpoint)))
+        .unwrap();
+    assert_eq!(peer.snapshot(), expected.snapshot());
+    assert!(source.delta_since(&peer.checkpoint()).is_empty());
+}
+
 proptest! {
     #[test]
     fn shuffled_duplicate_batches_equal_full_merge(history in prop::collection::vec((0_u8..3, 0_u8..9, any::<u8>()), 1..70)) {
