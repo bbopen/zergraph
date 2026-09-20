@@ -1,9 +1,17 @@
 [package]
 name = "zergraph"
 version = "0.1.0"
-authors = ["Your Name <you@example.com>"]
 edition = "2021"
-description = "Adaptive Distributed Graph Database built with Rust."
-license = "MIT"
+description = "A small mergeable property graph with deterministic reads and portable snapshots."
+repository = "https://github.com/bbopen/zergraph"
+license-file = "LICENSE"
+publish = false
+include = ["src/**", "examples/**", "tests/**", "Cargo.toml", "Cargo.lock", "README.md", "LICENSE", "CHANGELOG.md", "docs/**"]
 
-[dependencies] 
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["float_roundtrip"] }
+uuid = { version = "1", features = ["v4", "serde"] }
+
+[dev-dependencies]
+proptest = "1"
