@@ -6,7 +6,7 @@ use crate::{
 use std::collections::{BTreeMap, BTreeSet};
 
 /// Exact register stamps without property values. Keep one per peer and advance
-/// it only after that peer acknowledges receipt. Default means no known state.
+/// it only after that peer acknowledges successful application. Default means no known state.
 #[derive(Debug, Clone, Default)]
 pub struct Checkpoint {
     nodes: BTreeMap<String, Known>,
@@ -16,7 +16,7 @@ pub struct Checkpoint {
 #[derive(Debug, Clone)]
 struct Known {
     live: Stamp,
-    properties: BTreeMap<String, Stamp>,
+    properties: Vec<(String, Stamp)>,
 }
 
 /// Mergeable partial state, including deletion stamps and edge endpoint records.
@@ -158,8 +158,13 @@ fn difference<K: Ord + Clone>(
                 .properties
                 .iter()
                 .filter(|(key, register)| {
-                    old.and_then(|e| e.properties.get(*key))
-                        .is_none_or(|stamp| register.stamp > *stamp)
+                    old.and_then(|e| {
+                        e.properties
+                            .binary_search_by(|(k, _)| k.cmp(key))
+                            .ok()
+                            .map(|i| &e.properties[i].1)
+                    })
+                    .is_none_or(|stamp| register.stamp > *stamp)
                 })
                 .map(|(key, register)| (key.clone(), register.clone()))
                 .collect();
