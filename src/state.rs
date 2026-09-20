@@ -122,8 +122,8 @@ pub(crate) struct State {
 // Borrow only changed incoming entities. Validate the complete merge before any
 // mutation, then avoid a second traversal of unchanged records.
 pub(crate) struct MergePlan<'a> {
-    nodes: Vec<(&'a String, &'a Entity)>,
-    edges: Vec<(&'a EdgeKey, &'a Entity)>,
+    pub nodes: Vec<(&'a String, &'a Entity)>,
+    pub edges: Vec<(&'a EdgeKey, &'a Entity)>,
     pub clock: u64,
 }
 impl State {

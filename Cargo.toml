@@ -19,3 +19,7 @@ proptest = { version = "1", default-features = false, features = ["std"] }
 [[bench]]
 name = "perf"
 harness = false
+
+[[bench]]
+name = "sync"
+harness = false
