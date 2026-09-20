@@ -1,30 +1,37 @@
 # Zergraph
 
-**A small Rust property graph for independent agents, robots, and applications.**
+Zergraph is a Rust property graph that merges changes from independent writers.
+Store entities, labeled relationships, and JSON properties. Each writer edits a
+local graph and exchanges complete snapshots with other writers.
 
-Give each writer a local graph. Connect observations, evidence, assets, or dependencies. Work independently, exchange snapshots, and merge into the same state.
-
-**667 lines of core Rust · 3 runtime dependencies · deterministic reads · no background runtime**
-
-Zergraph keeps the graph and its merge rules inside your process. Your application chooses how to store snapshots, move them between peers, and act on their contents. It is a private 0.1 release candidate; see [distribution](#distribution).
-
-[Quick start](#quick-start) · [Cookbook](docs/COOKBOOK.md) · [Performance](#measured-performance) · [Hardware and scale](#from-small-devices-to-large-deployments) · [Choosing a library](#when-to-choose-zergraph)
+The core has 667 lines in three Rust modules and three direct runtime dependencies.
+Your application provides storage and transport. Zergraph starts no background tasks.
 
 ## Quick start
 
-From a checkout of this release candidate:
+From a checkout of this branch, run the evidence example:
 
 ```sh
 cargo run --locked --example evidence
-cargo run --locked --example swarm
 ```
 
-Use that checkout from a neighboring Rust application:
+The example merges two writers, restores a snapshot, and checks that an old test
+result stays retracted. It prints:
+
+```text
+Evidence reconciled: current test run supports the reviewed claim.
+Old support remains retracted after snapshot restore and stale merge.
+```
+
+To use Zergraph in another Rust crate, add a path dependency to that crate's
+`Cargo.toml`. Set the path to your Zergraph checkout:
 
 ```toml
 [dependencies]
 zergraph = { path = "../zergraph" }
 ```
+
+Put this example in your application's `src/main.rs` and run `cargo run`:
 
 ```rust
 use zergraph::{EdgeKey, Graph, Snapshot};
@@ -54,115 +61,106 @@ fn main() -> Result<(), zergraph::Error> {
 }
 ```
 
-Nodes have caller-chosen string IDs. A directed edge is identified by its complete `(source, label, target)` tuple. Properties are owned JSON values. The same primitives work for a test result, a robot observation, a specimen, or an infrastructure dependency.
+The program exits without output when both writers have the same state and the
+restored graph contains the test result.
+
+## Documentation
+
+| You want to... | Read |
+|---|---|
+| Try the API | [Quick start](#quick-start) |
+| Build an application | [Cookbook](docs/COOKBOOK.md) and [integration guide](docs/INTEGRATION.md) |
+| Look up merge and deletion rules | [Semantics](docs/SEMANTICS.md) or run `cargo doc --no-deps --open` |
+| Assess a design | [Alternatives](docs/ALTERNATIVES.md), [deployment](docs/DEPLOYMENT.md), and [application ideas](docs/APPLICATIONS.md) |
 
 ## When to choose Zergraph
 
-Choose it when your application needs **relationships plus independently mergeable state**, you are calling from Rust, and each graph can fit in memory and travel as a complete snapshot. You get a small API and explicit lifecycle rules, while keeping your existing storage and transport choices.
+Use Zergraph when independent writers need to merge relationships and properties,
+and each graph fits in memory. Every exchange sends a complete snapshot, including
+deleted records. This works best for a graph with a limited scope, such as one
+mission, project, or experiment.
 
-The alternatives below address different jobs. This table compares their documented roles; no cross-project speed benchmark was run.
+| Main requirement | Consider |
+|---|---|
+| An in-process Rust graph with LWW merge and snapshot exchange | Zergraph |
+| A graph CRDT with schema, delta sync, and persistence | [Silk](https://github.com/Kieleth/silk-graph), Rust and Python |
+| An operation-based two-phase graph CRDT | [crdt-graph](https://github.com/bkbkb-net/crdt-graph), Rust |
+| Local graph algorithms | [petgraph](https://github.com/petgraph/petgraph), Rust, or [NetworkX](https://networkx.org/), Python |
+| Collaborative text, lists, or documents | [Automerge](https://github.com/automerge/automerge), [Loro](https://github.com/loro-dev/loro), or [Yjs and Yrs](https://github.com/y-crdt/y-crdt), Rust and JavaScript ecosystems |
+| A decentralized graph with browser and peer tools | [GUN](https://github.com/amark/gun), JavaScript |
+| Agent context with extraction and retrieval | [Graphiti](https://github.com/getzep/graphiti), Python |
+| Shared robotics world state and middleware | [CORTEX](https://github.com/robocomp/cortex), C++ and Python |
+| Durable local SQL or key-value storage | [SQLite](https://sqlite.org/about.html), C, or [bbolt](https://github.com/etcd-io/bbolt), Go |
+| Graph queries across a database service | [Dgraph](https://docs.dgraph.io/graphql/) or [Neo4j](https://neo4j.com/docs/cypher-manual/25/introduction/cypher-neo4j/) |
 
-| If the main job is… | Consider | Language / interface |
-|---|---|---|
-| A compact graph with explicit LWW merging and application-owned snapshot exchange | **Zergraph** | Rust |
-| A richer graph CRDT with ontology, operation/delta sync, and persistence | [Silk](https://github.com/Kieleth/silk-graph) | Rust, Python |
-| An operation-based two-phase graph CRDT | [crdt-graph](https://github.com/bkbkb-net/crdt-graph) | Rust |
-| Local graph algorithms and analysis | [petgraph](https://github.com/petgraph/petgraph), [NetworkX](https://networkx.org/) | Rust, Python |
-| Collaborative documents, text, lists, or trees | [Automerge](https://github.com/automerge/automerge), [Loro](https://github.com/loro-dev/loro), [Yjs / Yrs](https://github.com/y-crdt/y-crdt) | Rust and JavaScript ecosystems; other bindings vary |
-| A decentralized graph with an existing browser/peer ecosystem | [GUN](https://github.com/amark/gun) | JavaScript |
-| Temporal AI context with extraction and retrieval integrations | [Graphiti](https://github.com/getzep/graphiti) | Python |
-| Durable local SQL or key-value storage | [SQLite](https://sqlite.org/about.html), [bbolt](https://github.com/etcd-io/bbolt) | C / many bindings, Go |
-| An operated graph database with server-side queries | [Dgraph](https://docs.dgraph.io/graphql/), [Neo4j](https://neo4j.com/docs/cypher-manual/25/introduction/cypher-neo4j/) | GraphQL / Cypher-facing services |
-
-For robotics-specific shared-world infrastructure, also compare [RoboComp CORTEX](https://github.com/robocomp/cortex). [The full selection guide](docs/ALTERNATIVES.md) explains the different state models, synchronization boundaries, ecosystem choices, and source references.
+The [selection guide](docs/ALTERNATIVES.md) explains these differences. This is a
+comparison of documented features. We have not benchmarked Zergraph against these projects.
 
 ## Measured performance
 
-The core uses ordered outgoing ranges, an incoming-edge index, and a merge plan that validates incoming state before applying changed records. Snapshot encoding borrows stored values instead of copying the graph.
+The benchmark used an Apple M3 and a release build with 1,024 nodes and 4,096 edges.
+Each node had four outgoing edges. Results are medians of three process medians,
+with seven samples per process.
 
-Apple M3, release build, **1,024 nodes / 4,096 edges**, fixed degree four; median of three process medians, seven samples per process:
-
-| Operation | Before optimization | Current candidate |
+| Operation | Before optimization | Current core |
 |---|---:|---:|
-| Outgoing neighborhood | 446 µs | **0.524 µs** |
-| Incoming neighborhood | 451 µs | **0.749 µs** |
-| Full snapshot merge with one changed property | 1.054 ms | **0.182 ms** |
-| Snapshot encoding | 1.981 ms | **1.245 ms** |
+| Outgoing neighborhood | 446 µs | 0.524 µs |
+| Incoming neighborhood | 451 µs | 0.749 µs |
+| Full snapshot merge with one changed property | 1.054 ms | 0.182 ms |
+| Snapshot encoding | 1.981 ms | 1.245 ms |
 
-These gains compare Zergraph revisions on the same fixture. The core grew by 72 lines. The index trades extra memory and restore/fork work for fast neighbor reads: a separate **10,000-node / 40,000-edge** graph process used **72.8 MiB peak RSS**, versus 61.0 MiB before indexing. Snapshot size is unchanged; the 1,024-node fixture encodes to about **1.62 MB**.
+The incoming-edge index speeds up reads but uses more memory and makes restore and
+fork slower. A separate process with 10,000 nodes and 40,000 edges used 72.8 MiB peak
+RSS, up from 61.0 MiB. The 1,024-node snapshot remains 1,619,049 bytes.
 
-Small source does not imply constant memory or unlimited graph size. [Performance details](docs/PERFORMANCE.md) include every measured operation, slower paths, build costs, raw comparison data, and reproducible commands.
+[Performance details](docs/PERFORMANCE.md) include all timings, memory costs, build
+times, raw comparison data, and commands to repeat the measurements.
 
-## From small devices to large deployments
+## Hardware and scale
 
-The useful scaling unit is **one bounded graph**: a robot's observations, a work session, a site, a tenant, or an experiment. A larger system runs many such graphs and routes each complete snapshot only to the peers that need that graph.
-
-| Scale | Reasonable target | Status |
-|---|---|---|
-| Smallest experimental device | **ESP32-S3 with 8 MB PSRAM**, tiny graphs, custom ESP-IDF Rust `std` toolchain | Feasible porting target; unbuilt and untested |
-| Small Linux device | **64 MB Cortex-A7 board**, such as Luckfox Pico Mini A | Feasible small-workload experiment; image/ABI and memory must be checked |
-| Practical edge computer | **Raspberry Pi Zero 2 W, 512 MB RAM** | Recommended first hardware acceptance target; not yet run |
-| Native process | Linux, macOS, Windows | Cross-platform CI; measured performance on Apple M3 |
-| Data-center composition | **1,000 workers × 100 independent graphs**; about **102 million aggregate nodes** at the primary fixture's shape | Illustrative architecture, with application-owned routing/storage; not a cluster benchmark |
-
-The [deployment guide](docs/DEPLOYMENT.md) supplies primary hardware/toolchain sources and the cluster's memory and bandwidth arithmetic. Zergraph supplies each in-process graph; the deployment owns partition assignment, delivery, storage, and queries across graphs. The upper example describes many bounded graphs, rather than one automatically sharded global graph.
-
-## Cookbook: small programs, useful relationships
-
-Start with a question you want to answer after independent work has been reconciled:
-
-| Question | Starting point |
+| Target | Status |
 |---|---|
-| Which test run supports this code change, and which evidence was retracted? | [Coding evidence](examples/evidence.rs) |
-| Can an inspector correct a reading while a planner adds follow-up work? | [Field inspection](examples/field_inspection.rs) |
-| Can four robots preserve disagreeing observations after disconnection? | [Parallel robot observations](examples/swarm.rs) |
-| Which sample, transformation, and configuration produced this result? | [Runnable lineage recipe](examples/lineage.rs) |
-| Which salvaged component has evidence that it fits this repair? | [Runnable repair and reuse recipe](examples/repair.rs) |
-| Can agents connect archaeological interpretations, biodiversity observations, or anomalies across disciplines? | [Exploratory recipes](docs/COOKBOOK.md) |
+| ESP32-S3 with 8 MB PSRAM | Proposed port for small graphs. Requires a custom ESP-IDF Rust `std` toolchain. |
+| Luckfox Pico Mini A with 64 MB RAM | Proposed Linux port. The binary must match the board's system image. |
+| Raspberry Pi Zero 2 W with 512 MB RAM | Suggested first device test. |
+| Linux, macOS, and Windows | CI passes. Performance measurements use Apple M3. |
+| 1,000 workers with 100 independent graphs each | Design example with about 102 million total nodes at the benchmark graph size. |
 
-The recurring pattern is **separate assertions with linked evidence**. Give each observation or hypothesis its own ID. Two agents can then disagree without overwriting each other's assertion. AI extraction, ranking, and proposed connections belong in the application; the graph makes their relationships portable and inspectable.
+The device ports and cluster example have not been tested. The
+[deployment guide](docs/DEPLOYMENT.md) gives hardware sources, memory budgets, and
+bandwidth calculations. The application assigns graphs to workers and handles
+queries between graphs. Adding workers does not split one graph across the cluster.
 
-[Open the cookbook](docs/COOKBOOK.md) for executable starting points, compact graph models, and speculative applications that use the same API.
+## Merge rules
 
-## A contract small enough to learn
+Each node's membership, each edge's membership, and each property has a
+last-write-wins register, or LWW register. Writes are ordered by logical counter,
+then writer UUID. This order does not represent the time of an observation.
 
-| Concept | Rule |
-|---|---|
-| Writers | `new`, `default`, `fork`, and restore create fresh UUID writer identities. A live `Graph` is not cloneable. |
-| Merge | Membership and each property are independent LWW registers ordered by `(logical counter, writer UUID)`. Peers converge after exchanging complete state. |
-| Conflicts | Different property keys retain independent updates. Concurrent writes to one property select one deterministic winner. Logical order is not observation time or factual truth. |
-| Identity | Edge keys are structured tuples; IDs may contain colons, Unicode, or empty strings. An identical edge tuple denotes the same relationship. |
-| Deletion | Removing a node hides incident edges. Re-adding the same ID revives retained properties and still-live relationships. Use a fresh ID for a replacement entity. |
-| Properties | JSON `null` is a value; deletion has a separate marker. Nested JSON objects are atomic property values. |
-| Snapshots | Include hidden records and tombstones. Duplicated and reordered delivery is supported. Deletion does not reclaim or securely erase stored data. |
+Different property keys merge independently. Concurrent writes to the same key
+select one winner. Give each observation its own node ID to preserve disagreement.
 
-The API covers insertion/removal, immutable lookup and iteration, incoming/outgoing relationships, per-property edits, snapshots, and merge. It leaves transport, durability, permissions, schema, historical queries, and distributed task ownership to the application. There is no partial-snapshot protocol or tombstone reclamation in this version.
+Removing a node hides its edges. Re-adding the same ID restores its retained
+properties and still-live edges. A replacement entity needs a new ID. Snapshots
+retain deleted records; deletion does not reclaim memory.
 
-[Precise semantics](docs/SEMANTICS.md) · [Integration guide for coding agents](docs/INTEGRATION.md) · `cargo doc --no-deps --open`
+The [semantics reference](docs/SEMANTICS.md) defines the full contract.
 
-## Read the implementation
-
-| File | Responsibility |
-|---|---|
-| [`src/lib.rs`](src/lib.rs) | Public graph API, writer identity, visibility, and adjacency |
-| [`src/state.rs`](src/state.rs) | LWW records, validation, and merge plans |
-| [`src/snapshot.rs`](src/snapshot.rs) | Versioned snapshot codec |
-
-The rest of the repository explains, demonstrates, and verifies that core. [Provenance](docs/PROVENANCE.md) records its relationship to the earlier Zerontology and CRDT fabric experiments; [the changelog](CHANGELOG.md) records the release candidate.
-
-## Develop and verify
+## Development
 
 ```sh
-cargo check --lib --locked       # fast edit loop; retain Cargo's build cache
+cargo check --lib --locked
 cargo test --all-targets --locked
 cargo test --doc --locked
 cargo clippy --all-targets --locked -- -D warnings
 ```
 
-CI also checks the `serde_json/preserve_order` configuration, runs every cookbook example, and verifies the packaged crate on Linux, macOS, and Windows. Generated tests exercise merge laws, writer restarts, deletion/revival, index consistency, floating-point transport, and snapshot compatibility.
-
-Performance measurements are opt-in: `cargo bench --bench perf -- --measure`. Build the harness once, then run the executable Cargo reports with `--measure` to repeat measurements without a build cycle. Ordinary tests use its tiny smoke mode. [Contributor guide](CONTRIBUTING.md).
+Keep `target/` between edits. CI also checks `serde_json/preserve_order`, runs all
+five examples, and verifies the package. See [Contributing](CONTRIBUTING.md) for the
+release commands and [provenance](docs/PROVENANCE.md) for the earlier implementations.
 
 ## Distribution
 
-Private 0.1 release candidate; this is a release pull request, not a public registry release. Use the reviewed checkout as a path dependency or pin an authenticated Git dependency to the revision you reviewed. `publish = false` remains set. [LICENSE](LICENSE) preserves the repository's existing proprietary terms.
+This is a private 0.1 release candidate. Use a path dependency or an authenticated
+Git dependency pinned to the revision you reviewed. Registry publication is disabled
+with `publish = false`. The repository retains its [proprietary license](LICENSE).

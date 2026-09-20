@@ -1,14 +1,17 @@
 # Working on Zergraph
 
-Read README.md, docs/SEMANTICS.md, and CONTRIBUTING.md first. The core is the three Rust modules under src/. Cookbooks, research notes, benchmarks, tests, and examples explain and validate the core; they are not additional runtime subsystems.
+Read README.md, docs/SEMANTICS.md, and CONTRIBUTING.md before editing.
 
-- Keep the crate synchronous and preserve its caller-owned storage/transport boundary.
-- Preserve distinct writer identity, atomic merge rejection, deterministic views, deletion/revival behavior, and complete snapshot state.
-- Use the public API in examples. Put domain-specific modeling in examples and docs/COOKBOOK.md.
-- Run a focused check during edits. Run the documented release checks before finalizing a behavior change; execute example main functions, not only cargo test --examples.
-- Do not run timing campaigns through normal tests. The benchmark binary requires --measure.
-- Measure performance changes on the same workload and report memory, restore, and fork tradeoffs. Keep benchmark claims scoped to their recorded hardware and graph shape.
-- Describe hardware targets and cluster compositions as reasoned designs until they have actual execution evidence. The library currently exchanges whole snapshots and does not implement distributed sharding or global queries.
-- Update documentation and snapshot compatibility tests when the contract changes. Preserve the existing license and publication setting unless the user requests a distribution change.
-
-The current user task's explicit instructions take precedence over this guidance. Routine reversible implementation, documentation, and validation work does not require another approval step.
+- Keep the core synchronous. The application owns storage and transport.
+- Preserve fresh writer identities, atomic merge rejection, deterministic views,
+  deletion and revival rules, and complete snapshots.
+- Use the public API in examples. Keep domain code out of the core.
+- Run focused checks during edits and the documented release checks for behavior
+  changes. Execute example main functions as well as compiling them.
+- Enable benchmark timings only with `--measure`.
+- Compare performance on the same workload. Report memory, restore, and fork costs.
+- Label untested hardware ports and cluster designs as proposals.
+- Write plain technical English. Cut hype, repeated caveats, and invented jargon.
+  Keep runnable task guides separate from reference and unbuilt application ideas.
+- Preserve the license, publication setting, and snapshot compatibility unless the
+  user requests a change to them.

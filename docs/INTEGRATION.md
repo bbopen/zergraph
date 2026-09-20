@@ -1,48 +1,76 @@
-# Integrating Zergraph
+# Integrate Zergraph
 
-Use the [README](../README.md) for the quick start and [cookbook](COOKBOOK.md) for domain patterns. This page is the compact handoff for a human or coding agent incorporating the library.
+Start with the [quick start](../README.md#quick-start). Use this guide to add graph
+identity, storage, and snapshot exchange to an application.
 
-## Choose one graph's boundary
+## Choose the data for one graph
 
-Pick a working set whose complete state can live in memory and be exchanged: one robot mission, investigation, project session, experiment, or tenant. Keep large payloads in your existing storage; graph properties can contain artifact IDs, hashes, and URIs.
+Keep each graph small enough to fit in memory and exchange as a complete snapshot.
+One robot mission, investigation, project session, or experiment is a useful starting
+point. Store large payloads elsewhere. Put their IDs, hashes, or URIs in properties.
 
-The application identifies which graph a snapshot belongs to. The codec contains no tenant, authorization, or routing envelope. Put that information in your own message/storage envelope and route a whole snapshot to the correct graph. Never create a partial snapshot by removing hidden records or tombstones from the encoded JSON.
+Include the graph ID in your storage record or network message. The snapshot codec
+does not include a tenant or routing ID. Send each snapshot to the matching graph.
+Preserve the complete snapshot, including hidden records and deletion markers.
 
-## Give things durable identities
+## Assign stable IDs
 
-Node IDs belong to your domain. `asset:pump-4`, a UUID, a URI, or a content identifier can all work. Reuse an ID for the same entity; allocate a new ID for its replacement. An edge's identity is `(source, label, target)`. Use an observation or assertion node when multiple independent occurrences of the same relationship must coexist.
+Use your existing IDs, such as `asset:pump-4`, UUIDs, or URIs. Reuse an ID for the
+same entity. Allocate a new ID for a replacement.
 
-Store independently editable facts as separate top-level properties. A nested JSON object is one atomic property value. For competing observations, use separate assertion nodes with author/source/time properties rather than a single shared `status` value. Application timestamps describe the observation; the library's logical clock describes write ordering.
+An edge's identity is `(source, label, target)`. If several occurrences need their
+own properties or lifetimes, create a node for each occurrence.
 
-## Start independent writers explicitly
+Give competing observations separate nodes with author, source, and time properties.
+Keep independently editable facts under separate property keys. A nested JSON
+object is one value; its internal keys do not merge independently.
 
-- `Graph::new()` creates an empty writer.
-- `graph.fork()` copies current state into a new writer.
-- `Graph::from_snapshot(snapshot)` restores state into a new writer.
-- `graph.snapshot()` captures immutable, cloneable state for sharing.
+## Create independent writers
 
-UUID writer identity is automatic. A live graph is intentionally not `Clone`. You can move independent graphs onto standard threads, as the [swarm example](../examples/swarm.rs) does. Share immutable snapshots; let one owner mutate each graph, or put synchronization around it in your application when necessary.
+| Operation | Result |
+|---|---|
+| `Graph::new()` | Empty graph with a fresh writer ID |
+| `graph.fork()` | Copy of the current state with a fresh writer ID |
+| `Graph::from_snapshot(snapshot)` | Restored state with a fresh writer ID |
+| `graph.snapshot()` | Complete state that can be cloned and shared |
 
-## Store and exchange state
+Let one owner mutate each graph. Move independent graphs onto standard threads when
+needed, as the [swarm example](../examples/swarm.rs) does. A live `Graph` does not
+implement `Clone`.
 
-1. Capture `graph.snapshot()` and encode it with `to_bytes()`.
-2. Use your application's storage mechanism to durably commit those bytes. The library does not save or flush automatically.
-3. Transfer the bytes with the graph's routing identity through your existing transport.
-4. Decode with `Snapshot::from_bytes()` and merge with `graph.merge(&snapshot)`.
-5. Deliver complete state in both directions, or through an application topology that eventually reaches every intended replica.
+## Store and exchange snapshots
 
-Duplicate delivery is fine. A merge updates only the receiver, and no background process sends its state onwards. The return value reports changes to stored state, including hidden metadata; it is not an acknowledgment that another peer received anything. The snapshot codec validates structure/version and same-stamp conflict checks protect merge atomicity. The application supplies trust, message-size limits, and transport authentication appropriate to its environment.
+1. Capture the state with `graph.snapshot()`.
+2. Encode the snapshot with `to_bytes()`.
+3. Store the bytes and graph ID with your application's durability mechanism.
+4. Send the bytes and graph ID through your transport.
+5. Decode the received bytes with `Snapshot::from_bytes()`.
+6. Merge the snapshot into the matching graph with `graph.merge(&snapshot)`.
+7. Deliver each writer's changes to every intended replica.
 
-For files, choose an atomic replacement and durability strategy for your operating system. A successful `std::fs::write` alone is not a library-provided crash-recovery protocol. For database storage, store the snapshot and routing metadata in the transaction your application already uses.
+Duplicate delivery is valid. A merge changes only the receiver. Your application
+must send replies or forward state. The merge result says whether stored state
+changed, including hidden metadata.
 
-## Read a consistent graph view
+For files, use an atomic replacement and flush strategy for your operating system.
+For a database, store the snapshot and graph ID in one transaction. Zergraph does
+not write to disk. Apply authentication and message-size limits at your transport.
 
-Use `node`, `edge`, `nodes`, `edges`, `outgoing`, and `incoming`; views are immutable and deterministic. Every visible edge has visible endpoints. Removing a node hides its incident relationships, but retains their underlying state. Explicitly remove an edge if it should remain gone after the endpoint returns.
+## Read the result
 
-Snapshots still hold deletions and hidden properties. Treat them as retained data when choosing storage policy. Serialization format version 1 is a library interchange format; use the codec rather than editing its JSON representation directly.
+Use `node`, `edge`, `nodes`, `edges`, `outgoing`, and `incoming`. These methods return
+immutable views in deterministic order. Every visible edge has visible endpoints.
 
-## Keep the first application small
+Removing a node hides its edges but retains their state. Remove an edge explicitly
+if it must stay removed when an endpoint returns. A snapshot still contains hidden
+properties and deletion markers.
 
-A useful acceptance case is: two independent writers update different facts, one retracts an old relationship, the application delivers duplicate/reordered snapshots, and the restored graph answers the original question. The [evidence](../examples/evidence.rs), [inspection](../examples/field_inspection.rs), and [swarm](../examples/swarm.rs) examples are copyable starting points.
+## Check your application
 
-Measure retained graph size, encoded snapshot bytes, peak memory during clone/decode/restore, and the queries that actually matter. Then consult [performance](PERFORMANCE.md) and [deployment](DEPLOYMENT.md) before adding indexing, alternate storage, or a new synchronization protocol.
+Start with two writers that update different facts. Retract an old relationship,
+deliver snapshots in different orders with duplicates, then save and restore the
+result. Check that the graph still answers the original question.
+
+Measure retained state, snapshot bytes, peak memory during exchange, and the queries
+your application uses. See [performance](PERFORMANCE.md), [deployment](DEPLOYMENT.md),
+and the [semantics reference](SEMANTICS.md).
