@@ -1,12 +1,35 @@
 # Cookbook
 
-These six examples use the public API. The snapshot examples merge independent
+These seven examples use the public API. The snapshot examples merge independent
 changes, encode complete state, restore the graph, and check the result. The work
-board example also sends a sparse delta after a snapshot bootstrap. Run commands
-from the repository root.
+board and bounded-sync examples also send deltas after bootstrap. Run commands from
+the repository root.
 
 For new application designs, see [Application ideas](APPLICATIONS.md). For storage
 and transport, see [Integrate Zergraph](INTEGRATION.md).
+
+## Bound retained synchronization knowledge
+
+Use this pattern when the application must bound the checkpoint copies it keeps for
+a synchronization session.
+
+```sh
+cargo run --locked --example bounded_sync
+```
+
+The example uses local limits of two checkpoint copies and 128 retained registers.
+The two copies are the acknowledged baseline and one pending candidate. A dropped
+send retries from the baseline; another candidate is refused while both slots are
+occupied. The graph refuses an over-register-budget checkpoint before creating a
+partial one. Forgetting peer knowledge is safe: a delta from `Checkpoint::default()`
+reboots the peer with complete retained state.
+
+These limits are application policy. They do not impose a byte limit on snapshots or
+deltas, and Zergraph never truncates a delta. Defer a send when the application has
+no budget for its state or transport bytes; use a complete snapshot only when its
+own budget permits it.
+
+[Source: bounded_sync.rs](../examples/bounded_sync.rs)
 
 ## Sync a work board after bootstrap
 

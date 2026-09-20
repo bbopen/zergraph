@@ -246,6 +246,29 @@ fn delta_comparison_handles_shifted_and_missing_checkpoint_keys() {
     assert!(source.delta_since(&peer.checkpoint()).is_empty());
 }
 
+#[test]
+fn checkpoint_limits_include_hidden_membership_and_property_tombstones() {
+    let empty = Graph::new();
+    assert!(empty.checkpoint_with_limit(0).is_some());
+    let (mut graph, edge) = pair();
+    graph.set_edge_property(&edge, "cost", 1).unwrap();
+    // Two nodes, one edge, and two properties are five retained registers.
+    assert!(graph.checkpoint_with_limit(4).is_none());
+    let exact = graph.checkpoint_with_limit(5).unwrap();
+    assert!(graph.delta_since(&exact).is_empty());
+    graph.remove_node_property("a", "payload").unwrap();
+    graph.remove_edge_property(&edge, "cost").unwrap();
+    graph.remove_edge(&edge).unwrap();
+    graph.remove_node("b").unwrap();
+    let before = graph.snapshot();
+    assert!(graph.checkpoint_with_limit(4).is_none());
+    assert_eq!(graph.snapshot(), before);
+    let retained = graph.checkpoint_with_limit(5).unwrap();
+    assert!(graph.delta_since(&retained).is_empty());
+    graph.add_node("b").unwrap();
+    assert!(!graph.delta_since(&retained).is_empty());
+}
+
 proptest! {
     #[test]
     fn shuffled_duplicate_batches_equal_full_merge(history in prop::collection::vec((0_u8..3, 0_u8..9, any::<u8>()), 1..70)) {

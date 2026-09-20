@@ -1,6 +1,6 @@
 # Application ideas
 
-The [cookbook](COOKBOOK.md) contains six runnable examples. The designs below extend
+The [cookbook](COOKBOOK.md) contains seven runnable examples. The designs below extend
 those patterns to other work. They have not been tested as complete applications.
 Zergraph stores the relationships; an application captures evidence and uses the result.
 

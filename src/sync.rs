@@ -55,6 +55,22 @@ impl MergeChanges {
 }
 
 impl Graph {
+    /// Capture a complete checkpoint only if retained registers fit the limit.
+    /// Counts node/edge membership and properties, including deletion markers.
+    /// Returns `None` before copying if the limit is exceeded; never clips state.
+    /// This limits register count, not bytes. IDs and property names vary in size.
+    pub fn checkpoint_with_limit(&self, max_registers: usize) -> Option<Checkpoint> {
+        self.state
+            .nodes
+            .values()
+            .chain(self.state.edges.values())
+            .try_fold(max_registers, |remaining, entity| {
+                remaining
+                    .checked_sub(1)?
+                    .checked_sub(entity.properties.len())
+            })?;
+        Some(self.checkpoint())
+    }
     /// Capture register knowledge before constructing the outgoing delta. Retain
     /// it only after that delta is acknowledged; later edits may not have been sent.
     pub fn checkpoint(&self) -> Checkpoint {

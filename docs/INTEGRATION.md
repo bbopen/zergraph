@@ -92,6 +92,29 @@ property register. They are memory proportional to retained register count.
 state. Worst-case time is `O(n log n)` in retained registers. It does not retain an operation log,
 provide peer discovery, negotiate acknowledgements, or schedule retries.
 
+## Configure checkpoint limits
+
+`graph.checkpoint_with_limit(max_registers)` returns `Some(Checkpoint)` only when
+the complete checkpoint fits the requested register count. It counts every retained
+node and edge membership register and every property register, including deleted
+memberships and removed properties. If the count exceeds the limit, it returns
+`None` during its scan before allocating a checkpoint. It never returns a partial
+checkpoint.
+
+The limit counts registers, not bytes. It does not limit snapshot or delta payloads,
+and Zergraph never clips a delta to fit it. Apply separate storage and transport
+byte limits. Defer synchronization when the application cannot retain or send the
+complete state required; use a full snapshot only when that snapshot also fits the
+application's budget.
+
+Bound checkpoint copies separately. A single in-flight exchange normally holds both
+the old acknowledged checkpoint and its pending candidate, so it needs two copy
+slots for that session. Check copy capacity before requesting a candidate checkpoint.
+Do not discard the old checkpoint on a dropped send: retry from it. When the
+acknowledgement arrives, discard it and retain the candidate. The
+[bounded-sync example](../examples/bounded_sync.rs) uses a small `Vec<Checkpoint>`
+to make those copies explicit.
+
 ## Receive and inspect a delta
 
 Decode transport bytes with `Delta::from_bytes()`, then choose one receive API:
