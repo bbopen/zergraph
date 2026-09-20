@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.1.0 private release candidate
+## 0.1.0
 
 - Replace the original module skeleton with a property graph library.
 - Document local-crate and module-copy integration for host-maintained source.

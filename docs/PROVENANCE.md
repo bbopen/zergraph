@@ -1,6 +1,6 @@
 # Earlier implementations
 
-This branch puts the graph library in `bbopen/zergraph`. The larger experimental
+The graph library lives in `bbopen/zergraph`. The larger experimental
 repositories remain unchanged.
 
 The review used these revisions:

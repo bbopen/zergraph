@@ -13,7 +13,7 @@ and maintain it with your own code.
 
 ## Quick start
 
-From a checkout of this branch, run the evidence example:
+From a checkout of Zergraph, run the evidence example:
 
 ```sh
 cargo run --locked --example evidence
@@ -200,9 +200,17 @@ release commands and [provenance](docs/PROVENANCE.md) for the earlier implementa
 
 ## Distribution
 
-This is a private 0.1 release candidate. Use a path dependency or an authenticated
-Git dependency pinned to the revision you reviewed. Registry publication is disabled
-with `publish = false`.
+Version 0.1.0 is distributed through this private repository's
+[GitHub release](https://github.com/bbopen/zergraph/releases/tag/v0.1.0).
+Use a path dependency or an authenticated Git dependency pinned to the release:
+
+```toml
+[dependencies]
+zergraph = { git = "https://github.com/bbopen/zergraph.git", tag = "v0.1.0" }
+```
+
+Git access requires repository permission. Registry publication is disabled with
+`publish = false`.
 
 ## License
 
