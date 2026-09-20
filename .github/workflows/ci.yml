@@ -1,6 +1,7 @@
 name: Library
 on:
   push:
+    branches: [main]
   pull_request:
 permissions:
   contents: read
@@ -22,4 +23,5 @@ jobs:
       - run: cargo test --locked --features serde_json/preserve_order
       - run: cargo run --locked --example evidence
       - run: cargo run --locked --example field_inspection
+      - run: cargo run --locked --example swarm
       - run: cargo package --locked

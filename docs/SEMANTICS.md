@@ -12,7 +12,7 @@ If equal stamps on the same register carry unequal values, merge rejects the inp
 
 ## Graph interpretation
 
-A node is visible when its membership value is true. An edge is visible only when its own membership and both endpoint memberships are true. Hidden edge state is retained and merged normally. Adjacency is derived from this same predicate, so a cache cannot disagree with edge lookup after merge.
+A node is visible when its membership value is true. An edge is visible only when its own membership and both endpoint memberships are true. Hidden edge state is retained and merged normally. Outgoing traversal uses the ordered source range; a derived incoming index stores all retained edge identities, including hidden/deleted ones. Both apply the same visibility predicate as edge lookup. New identities update the index only after merge validation; restore rebuilds it. The index is excluded from snapshot state and wire encoding.
 
 Removing a node changes its membership only. It does not rewrite every incident edge. This means concurrent incident-edge creation cannot expose a dangling edge, and same-ID revival restores still-live relationships. Explicitly removing an edge while an endpoint is hidden prevents that edge's revival. Properties do not modify entity membership.
 
@@ -26,7 +26,7 @@ The graph permits cycles and self-loops. Edge identity includes source, label, a
 
 `Snapshot` contains complete state, not just the visible projection. The writer identity and transient clock of the receiving `Graph` are excluded: a restored writer is fresh and initializes its clock from retained stamps.
 
-Version 1 encodes a JSON object containing `version`, sorted `nodes` pairs, and sorted `edges` pairs. Entity state includes membership, properties, and their stamps. Edge keys are structured records, never delimiter-concatenated strings. Node/property keys and edge tuples have deterministic ordering. Nested JSON objects are sorted during encoding even if a downstream dependency enables `serde_json/preserve_order`.
+Version 1 encodes a JSON object containing `version`, sorted `nodes` pairs, and sorted `edges` pairs. Entity state includes membership, properties, and their stamps. Edge keys are structured records, never delimiter-concatenated strings. Node/property keys and edge tuples have deterministic ordering. Nested JSON objects are normalized at setters and decoding, even if a downstream dependency enables `serde_json/preserve_order`. The encoder borrows these immutable ordered values without cloning the graph. The wire shape is unchanged.
 
 Decoding rejects malformed data, unsupported versions, duplicate node/edge identities, zero/invalid writer stamps, and edges without endpoint records. Deleted endpoint records are valid. Snapshot files have no built-in checksum, signature, encryption, compression, framing, atomic replacement, or resource quota. Those belong at the caller's transport/storage boundary. Do not depend on undocumented JSON layout; use the codec API. Cross-version migration and byte-level cryptographic canonicalization are not promised by this preview.
 

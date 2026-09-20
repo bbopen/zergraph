@@ -6,7 +6,7 @@ description = "A small mergeable property graph with deterministic reads and por
 repository = "https://github.com/bbopen/zergraph"
 license-file = "LICENSE"
 publish = false
-include = ["src/**", "examples/**", "tests/**", "Cargo.toml", "Cargo.lock", "README.md", "LICENSE", "CHANGELOG.md", "docs/**"]
+include = ["src/**", "examples/**", "tests/**", "benches/**", "Cargo.toml", "Cargo.lock", "README.md", "LICENSE", "CHANGELOG.md", "docs/**"]
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }
@@ -14,4 +14,8 @@ serde_json = { version = "1", features = ["float_roundtrip"] }
 uuid = { version = "1", features = ["v4", "serde"] }
 
 [dev-dependencies]
-proptest = "1"
+proptest = { version = "1", default-features = false, features = ["std"] }
+
+[[bench]]
+name = "perf"
+harness = false

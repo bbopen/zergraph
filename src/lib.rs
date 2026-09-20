@@ -32,7 +32,10 @@ mod state;
 pub use serde_json::Value;
 pub use snapshot::Snapshot;
 use state::{Entity, Property, Register, Stamp, State};
-use std::{error, fmt};
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    error, fmt,
+};
 use uuid::Uuid;
 
 /// Identity of a directed labeled edge. Strings may contain any UTF-8 text.
@@ -128,6 +131,7 @@ pub struct Graph {
     writer: Uuid,
     clock: u64,
     state: State,
+    incoming: BTreeMap<String, BTreeSet<EdgeKey>>,
 }
 
 impl Default for Graph {
@@ -144,14 +148,24 @@ impl Graph {
     }
     /// Start an independent writer at the current state.
     pub fn fork(&self) -> Self {
-        Self::from_snapshot(self.snapshot())
+        Self {
+            writer: Uuid::new_v4(),
+            clock: self.clock,
+            state: self.state.clone(),
+            incoming: self.incoming.clone(),
+        }
     }
     /// Restore complete state with a fresh writer identity, never the old writer.
     pub fn from_snapshot(snapshot: Snapshot) -> Self {
+        let mut incoming = BTreeMap::new();
+        for key in snapshot.state.edges.keys() {
+            index_edge(&mut incoming, key);
+        }
         Self {
             writer: Uuid::new_v4(),
             clock: snapshot.state.max_clock(),
             state: snapshot.state,
+            incoming,
         }
     }
     /// Capture complete mergeable state, including deletions and hidden edges.
@@ -163,9 +177,10 @@ impl Graph {
     /// Merge complete peer state. Returns whether stored state changed, including
     /// hidden metadata. A conflicting stamp returns an error without mutation.
     pub fn merge(&mut self, other: &Snapshot) -> Result<bool, Error> {
-        self.state.check_merge(&other.state)?;
-        self.clock = self.clock.max(other.state.max_clock());
-        Ok(self.state.merge(&other.state))
+        let plan = self.state.prepare(&other.state)?;
+        self.clock = self.clock.max(plan.clock);
+        let incoming = &mut self.incoming;
+        Ok(self.state.merge(plan, |key| index_edge(incoming, key)))
     }
     fn tick(&mut self) -> Result<Stamp, Error> {
         let counter = self.clock.checked_add(1).ok_or(Error::ClockExhausted)?;
@@ -214,6 +229,7 @@ impl Graph {
         match self.state.edges.get_mut(&key) {
             Some(entity) => entity.live = Register { stamp, value: true },
             None => {
+                index_edge(&mut self.incoming, &key);
                 self.state.edges.insert(key, Entity::new(stamp));
             }
         }
@@ -260,13 +276,22 @@ impl Graph {
             .filter(|(k, e)| self.visible_edge(k, e))
             .map(|(key, entity)| Edge { key, entity })
     }
-    /// Scan visible outgoing edges. There is no mutable adjacency cache.
+    /// Visible outgoing edges, seeking directly to this source's ordered range.
     pub fn outgoing<'a>(&'a self, node: &'a str) -> impl Iterator<Item = Edge<'a>> {
-        self.edges().filter(move |e| e.key.source == node)
+        self.state
+            .edges
+            .range(EdgeKey::new(node, "", "")..)
+            .take_while(move |(key, _)| key.source == node)
+            .filter(|(key, entity)| self.visible_edge(key, entity))
+            .map(|(key, entity)| Edge { key, entity })
     }
-    /// Scan visible incoming edges.
+    /// Visible incoming edges, using a derived index of retained edge identities.
     pub fn incoming<'a>(&'a self, node: &'a str) -> impl Iterator<Item = Edge<'a>> {
-        self.edges().filter(move |e| e.key.target == node)
+        self.incoming
+            .get(node)
+            .into_iter()
+            .flatten()
+            .filter_map(|key| self.edge(key))
     }
     fn require_node(&self, id: &str) -> Result<(), Error> {
         self.node(id)
@@ -292,7 +317,7 @@ impl Graph {
             key.into(),
             Register {
                 stamp,
-                value: Property::Value(value.into()),
+                value: Property::value(value.into()),
             },
         );
         Ok(true)
@@ -326,7 +351,7 @@ impl Graph {
             key.into(),
             Register {
                 stamp,
-                value: Property::Value(value.into()),
+                value: Property::value(value.into()),
             },
         );
         Ok(true)
@@ -346,4 +371,12 @@ impl Graph {
         );
         Ok(true)
     }
+}
+
+// Index hidden/deleted identities too: deletion and revival only affect visibility.
+fn index_edge(index: &mut BTreeMap<String, BTreeSet<EdgeKey>>, key: &EdgeKey) {
+    index
+        .entry(key.target.clone())
+        .or_default()
+        .insert(key.clone());
 }
