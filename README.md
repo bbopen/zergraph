@@ -13,6 +13,7 @@ From this checkout:
 ```sh
 cargo run --locked --example evidence
 cargo run --locked --example field_inspection
+cargo run --locked --example swarm
 cargo test --locked
 ```
 
@@ -72,15 +73,18 @@ Snapshots contain the **whole graph**, including tombstones and hidden propertie
 
 This is an in-memory library for application-controlled peers. Snapshots have structural/version validation and conflicting-stamp detection, not authentication or Byzantine guarantees. LWW convergence does not guarantee exclusive task claims, a cycle-free dependency graph, or the truth of an observation.
 
-Adjacency reads scan stored edges, with endpoint lookups in ordered maps. Full-state merge and snapshots also touch retained state. No scale, real-time, embedded-hardware, or cross-language wire-compatibility claim is made; measure your workload before adding indexing or delta sync.
+Outgoing reads seek to the source's ordered edge range. Incoming reads use a derived index of retained edge identities. Both inspect visibility only for that neighborhood. The index costs extra memory and is rebuilt on restore; full-state merge and snapshots still touch retained state. No real-time, embedded-hardware, or cross-language wire-compatibility claim is made. See [measured performance and tradeoffs](docs/PERFORMANCE.md).
 
 ## Examples and applications
 
 - [`evidence`](examples/evidence.rs): two reviewers contribute evidence, retract a stale relationship, merge, and restore a snapshot.
 - [`field_inspection`](examples/field_inspection.rs): technicians independently correct an observation and schedule follow-up, preserving properties and deletion state.
+- [`swarm`](examples/swarm.rs): four robot replicas record distinct observations on standard threads, then converge through delayed, duplicate, and reordered snapshot delivery. This is a local simulation, with no physical robot control or network implementation.
 - [Applications](docs/APPLICATIONS.md): agent evidence, dependency handoffs, disconnected inspection, specimen lineage, and speculative AI-assisted discovery workflows using the same API.
 
 ## Development
+
+For the edit loop, `cargo check --lib --locked` checks only the library and its runtime dependencies. Keep Cargo's target cache; run the relevant integration test when changing behavior. The release gate is:
 
 ```sh
 cargo fmt --check
@@ -92,6 +96,8 @@ cargo package --locked
 ```
 
 Tests exercise generated three-writer histories, merge laws, writer restart, deletion/revival, scalar and nested JSON transport, and malformed snapshots. Floating-point round-trip support is enabled deliberately: changing a stored value during decoding would invalidate its original CRDT stamp.
+
+Benchmark explicitly with `cargo bench --bench perf -- --measure`. The dependency-free timing harness stays in smoke mode during ordinary tests. Build it once with `cargo bench --bench perf --no-run --locked`, then execute the reported binary with `--measure` for repeated measurements without a Cargo cycle. The property tests retain standard in-process generators and shrinking while disabling unused fork/timeout features.
 
 The source is a focused consolidation of the graph work in `zerontology` and `zergraph_dev`. The ontology, language, services, storage engines, and sharding experiments remain in their original repositories. See [provenance and scope](docs/PROVENANCE.md).
 

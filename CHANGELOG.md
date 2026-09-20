@@ -2,6 +2,11 @@
 
 ## 0.1.0 — private release candidate
 
+- Add measured outgoing ranges, an incoming-edge identity index, and merge plans that apply only changed records after complete validation.
+- Encode snapshots from borrowed state; normalize JSON values once at ingress.
+- Add an opt-in dependency-free benchmark harness and a parallel four-robot reconciliation example.
+- Remove unused property-test fork/timeout dependencies and duplicate feature-branch CI runs.
+
 - Replace the architecture scaffold with one owned property graph library.
 - Add labeled structured edges, deterministic views, LWW membership/properties, and explicit node revival.
 - Give each new/forked/restored graph a fresh writer identity.

@@ -47,6 +47,14 @@ pub(crate) enum Property {
     Removed,
 }
 
+impl Property {
+    // Normalize once at every value ingress, so snapshots can borrow stored data.
+    pub fn value(mut value: Value) -> Self {
+        value.sort_all_objects();
+        Self::Value(value)
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub(crate) struct Entity {
@@ -74,14 +82,18 @@ impl Entity {
                 Property::Removed => None,
             })
     }
-    fn check_merge(&self, other: &Self) -> Result<(), Error> {
+    fn check_merge(&self, other: &Self) -> Result<bool, Error> {
         self.live.check_merge(&other.live)?;
+        let mut changed = other.live.stamp > self.live.stamp;
         for (key, reg) in &other.properties {
             if let Some(ours) = self.properties.get(key) {
                 ours.check_merge(reg)?;
+                changed |= reg.stamp > ours.stamp;
+            } else {
+                changed = true;
             }
         }
-        Ok(())
+        Ok(changed)
     }
     fn merge(&mut self, other: &Self) -> bool {
         let mut changed = self.live.merge(&other.live);
@@ -106,6 +118,14 @@ pub(crate) struct State {
     pub nodes: BTreeMap<String, Entity>,
     pub edges: BTreeMap<EdgeKey, Entity>,
 }
+
+// Borrow only changed incoming entities. Validate the complete merge before any
+// mutation, then avoid a second traversal of unchanged records.
+pub(crate) struct MergePlan<'a> {
+    nodes: Vec<(&'a String, &'a Entity)>,
+    edges: Vec<(&'a EdgeKey, &'a Entity)>,
+    pub clock: u64,
+}
 impl State {
     pub fn max_clock(&self) -> u64 {
         self.nodes
@@ -116,29 +136,60 @@ impl State {
             .max()
             .unwrap_or(0)
     }
-    pub fn check_merge(&self, other: &Self) -> Result<(), Error> {
-        for (id, entity) in &other.nodes {
-            if let Some(ours) = self.nodes.get(id) {
-                ours.check_merge(entity)?;
-            }
-        }
-        for (key, entity) in &other.edges {
-            if let Some(ours) = self.edges.get(key) {
-                ours.check_merge(entity)?;
-            }
-        }
-        Ok(())
+    pub fn prepare<'a>(&self, other: &'a Self) -> Result<MergePlan<'a>, Error> {
+        let mut clock = 0;
+        let nodes = changes(&self.nodes, &other.nodes, &mut clock)?;
+        let edges = changes(&self.edges, &other.edges, &mut clock)?;
+        Ok(MergePlan {
+            nodes,
+            edges,
+            clock,
+        })
     }
-    pub fn merge(&mut self, other: &Self) -> bool {
-        merge_map(&mut self.nodes, &other.nodes) | merge_map(&mut self.edges, &other.edges)
+    pub fn merge(&mut self, plan: MergePlan<'_>, on_edge: impl FnMut(&EdgeKey)) -> bool {
+        merge_map(&mut self.nodes, plan.nodes, |_| {})
+            | merge_map(&mut self.edges, plan.edges, on_edge)
     }
 }
-fn merge_map<K: Ord + Clone>(ours: &mut BTreeMap<K, Entity>, theirs: &BTreeMap<K, Entity>) -> bool {
+
+fn changes<'a, K: Ord>(
+    ours: &BTreeMap<K, Entity>,
+    theirs: &'a BTreeMap<K, Entity>,
+    clock: &mut u64,
+) -> Result<Vec<(&'a K, &'a Entity)>, Error> {
+    let mut aligned = ours.iter();
+    let mut changed = Vec::new();
+    for (key, entity) in theirs {
+        // Full snapshots commonly have aligned keys. Sparse or shifted keys fall
+        // back to lookup, without scanning a much larger local graph.
+        let existing = aligned
+            .next()
+            .filter(|(k, _)| *k == key)
+            .map(|(_, v)| v)
+            .or_else(|| ours.get(key));
+        *clock = (*clock).max(entity.stamps().map(|s| s.counter).max().unwrap());
+        if existing
+            .map(|local| local.check_merge(entity))
+            .transpose()?
+            .unwrap_or(true)
+        {
+            changed.push((key, entity));
+        }
+    }
+    Ok(changed)
+}
+
+fn merge_map<K: Ord + Clone>(
+    ours: &mut BTreeMap<K, Entity>,
+    theirs: Vec<(&K, &Entity)>,
+    mut on_new: impl FnMut(&K),
+) -> bool {
     let mut changed = false;
     for (key, entity) in theirs {
         match ours.get_mut(key) {
             Some(ours) => changed |= ours.merge(entity),
             None => {
+                on_new(key);
                 ours.insert(key.clone(), entity.clone());
                 changed = true;
             }

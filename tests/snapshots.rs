@@ -1,6 +1,20 @@
 use serde_json::{json, Value};
 use zergraph::{EdgeKey, Error, Graph, Snapshot};
 
+#[test]
+fn original_release_snapshot_remains_byte_compatible() {
+    // Produced by the packaged de2029f release, before the performance refactor.
+    let bytes = include_bytes!("fixtures/v1.json");
+    let snapshot = Snapshot::from_bytes(bytes).unwrap();
+    assert_eq!(snapshot.to_bytes().unwrap(), bytes);
+    let graph = Graph::from_snapshot(snapshot);
+    assert_eq!(graph.incoming("doc:2026:42").count(), 1);
+    assert_eq!(
+        graph.node("asset:α").unwrap().property("version"),
+        Some(&json!(7))
+    );
+}
+
 fn fixture() -> Value {
     let mut graph = Graph::new();
     graph.add_node("a").unwrap();
