@@ -4,9 +4,6 @@
 # Backup files
 **/*.rs.bk
 
-# Cargo lock file
-Cargo.lock
-
 # IDE/editor directories
 .idea/
-.vscode/ 
+.vscode/
