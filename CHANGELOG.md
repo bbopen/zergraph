@@ -27,7 +27,8 @@
 - Add an opt-in benchmark program and remove unused proptest features and duplicate
   feature-branch CI runs.
 - Remove placeholder network, query, storage-tier, security, recovery, and deployment APIs.
-- Retain the proprietary license and disable registry publication.
+- Adopt MIT OR Apache-2.0 licensing; keep registry publication disabled.
+- Add a pixel-art README banner showing agent, robot, and server replicas.
 
 The API replaces the earlier skeleton. It does not provide a migration from the
 experimental repositories.

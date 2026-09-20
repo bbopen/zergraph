@@ -1,5 +1,7 @@
 # Zergraph
 
+![Zergraph: pixel-art swarms of software agents, field robots, and servers exchange graph updates between local replicas.](assets/zergraph-hero.png)
+
 Zergraph is a Rust property graph that merges changes from independent writers.
 Store entities, labeled relationships, and JSON properties. Each writer edits a
 local graph and exchanges snapshots or incremental deltas with other writers.
@@ -200,4 +202,13 @@ release commands and [provenance](docs/PROVENANCE.md) for the earlier implementa
 
 This is a private 0.1 release candidate. Use a path dependency or an authenticated
 Git dependency pinned to the revision you reviewed. Registry publication is disabled
-with `publish = false`. The repository retains its [proprietary license](LICENSE).
+with `publish = false`.
+
+## License
+
+Licensed under [MIT](LICENSE-MIT) or [Apache-2.0](LICENSE-APACHE), at your option.
+See [LICENSE.md](LICENSE.md).
+
+The [banner](assets/README.md) is an original generated homage to StarCraft-era
+Zerg sprite art. It depicts software agents, field robots, and servers exchanging
+graph updates.
