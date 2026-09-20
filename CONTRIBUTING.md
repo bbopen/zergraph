@@ -1,7 +1,9 @@
 # Contributing
 
 Keep application-specific code in examples and the cookbook. Keep storage, transport,
-and services in the application that uses Zergraph.
+and services in the application that uses Zergraph. Prefer small host functions to
+a configuration framework in the library. [Vendoring](docs/VENDORING.md) explains
+how to maintain the source as a local crate or application modules.
 
 ## Check an edit
 

@@ -2,7 +2,7 @@
 
 Start with the [quick start](../README.md#quick-start). Use this guide to add graph
 identity, storage, complete bootstrap, and optional sparse-delta exchange to an
-application.
+application. For source ownership and local adaptations, see [Vendoring](VENDORING.md).
 
 ## Choose the data for one graph
 
