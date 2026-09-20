@@ -16,6 +16,8 @@ pub struct Snapshot {
 #[serde(deny_unknown_fields)]
 struct Wire<N, E> {
     version: u32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    kind: Option<String>,
     nodes: N,
     edges: E,
 }
@@ -38,8 +40,12 @@ impl Snapshot {
     /// Encode version 1 JSON in stable order, including tombstones and hidden state.
     /// Transport framing, file replacement and durability are caller concerns.
     pub fn to_bytes(&self) -> Result<Vec<u8>, Error> {
+        self.encode(None)
+    }
+    pub(crate) fn encode(&self, kind: Option<&str>) -> Result<Vec<u8>, Error> {
         let wire = Wire {
             version: 1,
+            kind: kind.map(str::to_owned),
             nodes: Pairs(&self.state.nodes),
             edges: Pairs(&self.state.edges),
         };
@@ -48,10 +54,16 @@ impl Snapshot {
     /// Decode complete state. Unknown versions, duplicate identities, zero stamps,
     /// and edges without endpoint records are rejected. Deleted endpoints are valid.
     pub fn from_bytes(bytes: &[u8]) -> Result<Self, Error> {
+        Self::decode(bytes, None)
+    }
+    pub(crate) fn decode(bytes: &[u8], kind: Option<&str>) -> Result<Self, Error> {
         let wire: Wire<Records<String>, Records<EdgeKey>> =
             serde_json::from_slice(bytes).map_err(|e| Error::InvalidSnapshot(e.to_string()))?;
         if wire.version != 1 {
             return Err(Error::UnsupportedVersion(wire.version));
+        }
+        if wire.kind.as_deref() != kind {
+            return Err(Error::InvalidSnapshot("wrong message kind".into()));
         }
         let mut state = State::default();
         for (id, entity) in wire.nodes {

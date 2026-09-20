@@ -28,6 +28,7 @@
 
 mod snapshot;
 mod state;
+mod sync;
 
 pub use serde_json::Value;
 pub use snapshot::Snapshot;
@@ -36,6 +37,7 @@ use std::{
     collections::{BTreeMap, BTreeSet},
     error, fmt,
 };
+pub use sync::{Checkpoint, Delta, MergeChanges};
 use uuid::Uuid;
 
 /// Identity of a directed labeled edge. Strings may contain any UTF-8 text.
@@ -177,7 +179,10 @@ impl Graph {
     /// Merge complete peer state. Returns whether stored state changed, including
     /// hidden metadata. A conflicting stamp returns an error without mutation.
     pub fn merge(&mut self, other: &Snapshot) -> Result<bool, Error> {
-        let plan = self.state.prepare(&other.state)?;
+        self.merge_state(&other.state)
+    }
+    fn merge_state(&mut self, other: &State) -> Result<bool, Error> {
+        let plan = self.state.prepare(other)?;
         self.clock = self.clock.max(plan.clock);
         let incoming = &mut self.incoming;
         Ok(self.state.merge(plan, |key| index_edge(incoming, key)))
