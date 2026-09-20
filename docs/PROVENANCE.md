@@ -1,17 +1,37 @@
-# Provenance and consolidation
+# Earlier implementations
 
-This private library branch consolidates the useful graph concept into `bbopen/zergraph` while preserving the larger projects in place.
+This branch puts the graph library in `bbopen/zergraph`. The larger experimental
+repositories remain unchanged.
 
-Inspected sources:
+The review used these revisions:
 
-- `bbopen/zerontology` at `69818dd3e4289960e358f9d46df20c23ff194e50`: owning property graph, timestamp/replica LWW maps, node/edge lifecycle, and graph/store work.
-- `bbopen/zergraph_dev` at `e2e948371e064cdbe58178530a4d52b52b2d2523`: component CRDTs, multi-value properties, deletion tracking, and fabric experiments.
-- `bbopen/zergraph` at `e699848c793f6ae3f0d0ea089414587dbbb3e429`: original public module scaffold on the private repository's main branch.
+| Repository | Revision | Relevant work |
+|---|---|---|
+| `bbopen/zerontology` | `69818dd3e4289960e358f9d46df20c23ff194e50` | Property graph, LWW maps, entity lifecycle, and graph storage |
+| `bbopen/zergraph_dev` | `e2e948371e064cdbe58178530a4d52b52b2d2523` | Component CRDTs, multi-value properties, deletion tracking, and fabric experiments |
+| `bbopen/zergraph` | `e699848c793f6ae3f0d0ea089414587dbbb3e429` | Original module skeleton |
 
-The compact implementation retains the LWW graph approach rather than importing either platform wholesale. It simplifies entity state into independent membership/property registers, uses structured labeled edge keys, derives adjacency from visible state, and persists complete snapshots. Fresh writer identities replace cloneable mutable replicas. Owned JSON values replace ontology-specific categories and borrowed byte wrappers. This is a new small API with intentional breaking changes from the scaffold; it is not a drop-in compatibility layer or a source-preserving extraction.
+## What this library retains
 
-The incomplete event-log persistence boundary is replaced with a complete snapshot boundary. Tests specifically cover defects found during review: repeated insertion damage, ambiguous colon keys, writer-identity collisions, disappearing property changes, stale deletion replay, and dangling edges. A float serialization defect discovered during independent review is covered by an explicit regression and generated cases.
+The implementation retains the LWW graph approach. Each entity has independent
+membership and property registers. Edges use structured keys. Snapshots store complete
+state. New, forked, and restored graphs get fresh writer identities.
 
-Not imported: ontology schema/language, API/UI, native storage backends, ingestion, auth, telemetry, deployment tiers, routing weights, adaptive sharding, generic CRDT family wrappers, and network transport. Those concepts remain in their original repositories for later consideration.
+Owned JSON properties replace ontology-specific categories and borrowed byte wrappers.
+The API replaces the original skeleton. It is a new implementation, not a compatible
+extraction of either experimental library.
 
-Prior art was examined to avoid claiming novelty: [rust-crdt](https://github.com/rust-crdt/rust-crdt), [Silk](https://github.com/Kieleth/silk-graph), [crdt-graph](https://github.com/bkbkb-net/crdt-graph), [RoboComp CORTEX](https://github.com/robocomp/cortex), [Automerge](https://github.com/automerge/automerge), and [Graphiti](https://github.com/getzep/graphiti). These are comparisons, not dependencies or copied implementations. The intended value is a small, understandable graph contract.
+## What the review changed
+
+Complete snapshots replace the earlier graph-event persistence path, which did not
+reconstruct full graph state. Tests cover repeated insertion, ambiguous colon keys,
+writer-ID reuse, missing property changes,
+stale deletion replay, and dangling edges. A float serialization regression and
+generated numeric cases check exact transport.
+
+Ontology, ingestion, user interfaces, storage backends, authentication, network
+transport, and deployment services remain outside the crate. Those experiments are
+still available in their original repositories.
+
+The [alternatives guide](ALTERNATIVES.md) lists the projects used for comparison.
+Those projects are not dependencies or copied implementations.

@@ -1,17 +1,21 @@
 # Contributing
 
-Zergraph is a small graph library. A contribution should make that graph easier to use, understand, or verify. Domain recipes belong in the cookbook and examples; application storage, transport, planning, and services belong with their applications.
+Keep application-specific code in examples and the cookbook. Keep storage, transport,
+and services in the application that uses Zergraph.
 
-## Work loop
+## Check an edit
 
 ```sh
 cargo check --lib --locked
-cargo test --test adjacency --locked   # choose the test relevant to your change
+cargo test --test adjacency --locked
 ```
 
-Keep `target/` between edits. Ordinary tests do not run performance timing loops. Property-test dependencies are development-only; unused subprocess/timeout features are disabled.
+Choose the integration test that covers your change. Keep `target/` between edits.
+Ordinary tests do not run performance timing loops.
 
-## Release checks
+## Check a release
+
+Run these checks before finalizing a behavior change:
 
 ```sh
 cargo fmt --check
@@ -24,25 +28,53 @@ cargo run --locked --example field_inspection
 cargo run --locked --example swarm
 cargo run --locked --example lineage
 cargo run --locked --example repair
+```
+
+Commit the intended changes, then verify the package from the clean checkout:
+
+```sh
 cargo package --locked
 ```
 
-Run additional cookbook examples whenever they are added; keep the CI workflow aligned. `cargo test --all-targets` compiles examples but does not execute their `main` functions. Package verification runs from a clean checkout; commit intended changes before `cargo package --locked`.
+Add each new example to CI. `cargo test --all-targets` compiles examples but does not
+run their `main` functions. Run the commands above to execute their assertions.
 
-## Change the contract deliberately
+## Change behavior
 
-Read [SEMANTICS.md](docs/SEMANTICS.md) before changing writers, deletion, visibility, property handling, or merge. Keep failed merges atomic. Fresh writers must not reuse another live writer's identity. Indexes must agree with the visible graph before and after merge/restore. Snapshot tombstones and exact JSON numbers must survive transport.
+Read [Graph semantics](docs/SEMANTICS.md) before changing writers, deletion, visibility,
+properties, or merge. Add a regression test for the behavior being repaired. Keep
+failed merges atomic and indexes consistent with visible state.
 
-Add a regression that demonstrates the behavior being repaired. Keep compatibility fixtures when preserving the wire format; document and version intentional wire changes. Update the README and relevant recipes when the public contract changes. Prefer a focused helper or example over a new generic subsystem.
+Preserve the snapshot fixtures when retaining the format. Document and version an
+intentional format change. Update the relevant examples and reference when the
+public contract changes.
 
-## Measure performance changes
+## Measure performance
 
-Use `cargo bench --bench perf -- --measure` in a release build. Repeat the same fixture for baseline and candidate, retain raw samples, and report slower paths as well as improvements. Benchmark scripts belong outside the core. Record machine/toolchain, graph shape, property payloads, snapshot sizes, and memory cost. Numbers from one laptop do not establish hardware or cluster capacity.
+Run `cargo bench --locked --bench perf -- --measure` in a release build. Use the same
+fixture for the baseline and candidate. Repeat the runs and retain the raw samples.
+Report memory costs and slower operations as well as faster ones. Record the machine,
+toolchain, graph shape, properties, and snapshot size.
 
-The detailed [performance report](docs/PERFORMANCE.md) is the model for provenance and tradeoffs. New dependencies or internal worker threads should earn their cost through an actual workload.
+Follow the method in [Performance](docs/PERFORMANCE.md). Add dependencies or internal
+threads only when a measured workload justifies them.
 
-## Documentation and release status
+## Edit documentation
 
-Recipe code should execute and answer a concrete question after merge and restore. Mark exploratory ideas as proposals. Cite primary sources for hardware and alternative projects. Keep measured, inferred, and illustrative capacity statements distinct.
+Write plain technical English. Use the code's names consistently. State who does
+what, put conditions before instructions, and split sentences that carry several ideas.
+Cut promotional claims, repeated caveats, and unexplained jargon.
 
-This repository currently retains its proprietary license and disables registry publication. A public license, public registry release, or migration commitment is a separate project decision. The [changelog](CHANGELOG.md) describes what the candidate actually contains.
+Keep the quick start runnable. Put task steps in the cookbook and integration guide,
+exact behavior in the semantics reference, and design discussion in explanation pages.
+Link between them where needed. Keep unbuilt application ideas separate from examples
+that run. Use [Diátaxis](https://diataxis.fr/start-here/) to choose each page's purpose.
+
+Check changed code examples and relative links. Preserve benchmark values and their
+measurement conditions. Label proposed hardware targets and cluster designs once,
+where the reader first encounters them.
+
+## Distribution
+
+The repository retains its proprietary license and disables registry publication.
+The [changelog](CHANGELOG.md) lists the candidate's changes.

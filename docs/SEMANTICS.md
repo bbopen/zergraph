@@ -1,39 +1,113 @@
-# Merge and lifecycle contract
+# Graph semantics
 
-## State and join
+Zergraph uses last-write-wins registers, abbreviated LWW. Each register stores one
+value and the stamp that orders its writes.
 
-Each node ID and edge key maps to an entity with one timestamped boolean membership register and a map of independent timestamped property registers. A property is either a JSON value or an explicit removal marker. All collections are private ordered maps.
+## Identity and properties
 
-A stamp is `(counter: u64, writer: UUID)`, ordered lexicographically. Every successful write takes the next logical counter. Writer IDs are freshly generated on graph construction, forking, and restore. Receiving a snapshot advances the clock to at least the maximum received counter. Counter exhaustion is an error before mutation.
+A node has a string ID. A directed edge has a structured `(source, label, target)`
+key. IDs and labels accept any UTF-8 string, including colons and empty strings.
+The graph permits cycles and self-loops.
 
-Merge joins matching registers by maximum stamp and unions their keys. For states produced by independent writers, each register's join is associative, commutative, and idempotent; the pointwise graph join inherits those properties. This argument assumes noncolliding writer UUIDs and faithful snapshots. Runtime tests exercise generated reachable states; they are not a formal verification of all implementations or environments.
+Two nodes can have several edges with different labels. An identical triple denotes
+one edge. Separate occurrences need separate nodes if each has its own properties
+or lifetime.
 
-If equal stamps on the same register carry unequal values, merge rejects the input before changing any state. Validation does not prove that a sender is honest or reconstruct omitted history. The caller chooses and authenticates peers.
+Properties contain owned `serde_json::Value` values. JSON `null` is a value.
+Property deletion has a separate marker. A nested object is one property value;
+its internal keys do not merge independently.
 
-## Graph interpretation
+## Writers and stamps
 
-A node is visible when its membership value is true. An edge is visible only when its own membership and both endpoint memberships are true. Hidden edge state is retained and merged normally. Outgoing traversal uses the ordered source range; a derived incoming index stores all retained edge identities, including hidden/deleted ones. Both apply the same visibility predicate as edge lookup. New identities update the index only after merge validation; restore rebuilds it. The index is excluded from snapshot state and wire encoding.
+`Graph::new`, `Graph::default`, `Graph::fork`, and `Graph::from_snapshot` create fresh
+UUID writer identities. A live `Graph` does not implement `Clone`. A `Snapshot` does.
 
-Removing a node changes its membership only. It does not rewrite every incident edge. This means concurrent incident-edge creation cannot expose a dangling edge, and same-ID revival restores still-live relationships. Explicitly removing an edge while an endpoint is hidden prevents that edge's revival. Properties do not modify entity membership.
+Each node and edge has one membership register and a map of property registers.
+Membership is a boolean. A property register contains either a JSON value or a
+removal marker. Each register also has a stamp.
 
-Reusing an ID means reviving the same entity. Use a fresh ID to model replacement, a new incarnation, or an independent assertion. The core deliberately does not infer identity from names, labels, payloads, or content hashes.
+A stamp is `(counter: u64, writer: UUID)`. The counter orders writes first. The UUID
+breaks ties. Each write takes the next counter value. A merge advances the receiver's
+clock to at least the largest incoming counter. Counter exhaustion fails before mutation.
 
-Repeated live insertion is a no-op. Removing unknown/already-removed membership or an absent property is a no-op. Property setters always record a fresh write, even for equal values, because an explicit reassertion can matter when concurrent writes arrive later. Missing endpoints or property targets return typed errors.
+The counter represents write order, not the time of an observation.
 
-The graph permits cycles and self-loops. Edge identity includes source, label, and target, so it supports multiple labels between two nodes but not multiple independently identified occurrences of the same triple. Model occurrences as nodes if each needs its own metadata and lifetime.
+## Merge
 
-## Snapshots
+Merge takes the union of register keys and selects the value with the largest stamp
+for each key. Membership and properties merge independently. Concurrent writes to
+different properties survive. Concurrent writes to the same property select one winner.
 
-`Snapshot` contains complete state, not just the visible projection. The writer identity and transient clock of the receiving `Graph` are excluded: a restored writer is fresh and initializes its clock from retained stamps.
+For states from independent writers, this join is associative, commutative, and
+idempotent. The same properties hold for the graph join. This assumes noncolliding
+writer UUIDs and faithful snapshots. Tests exercise generated histories; they are
+not a formal proof of the implementation.
 
-Version 1 encodes a JSON object containing `version`, sorted `nodes` pairs, and sorted `edges` pairs. Entity state includes membership, properties, and their stamps. Edge keys are structured records, never delimiter-concatenated strings. Node/property keys and edge tuples have deterministic ordering. Nested JSON objects are normalized at setters and decoding, even if a downstream dependency enables `serde_json/preserve_order`. The encoder borrows these immutable ordered values without cloning the graph. The wire shape is unchanged.
+If equal stamps on one register have unequal values, merge returns
+`Error::ConflictingStamp` without changing state. Validation does not authenticate
+a sender or recover omitted records.
 
-Decoding rejects malformed data, unsupported versions, duplicate node/edge identities, zero/invalid writer stamps, and edges without endpoint records. Deleted endpoint records are valid. Snapshot files have no built-in checksum, signature, encryption, compression, framing, atomic replacement, or resource quota. Those belong at the caller's transport/storage boundary. Do not depend on undocumented JSON layout; use the codec API. Cross-version migration and byte-level cryptographic canonicalization are not promised by this preview.
+`Graph::merge` returns whether stored state changed, including hidden metadata.
+It updates only the receiver. Replicas converge after each receives all writers' changes.
 
-Complete snapshots preserve property deletions and hidden membership. Do not strip records or tombstones before merging: that would change the state contract. There is no automatic reclamation or peer membership protocol. LWW registers retain one value per entity/property key, not a full write history.
+## Visibility and deletion
 
-## Property meaning
+A node is visible when its membership is true. An edge is visible when its membership
+and both endpoint memberships are true. Hidden records remain in stored state.
 
-Properties use `serde_json::Value`, including arrays and objects. JSON null is distinct from a removed property. Nested objects are atomic property values: independent keys *inside* one object do not merge separately. Use separate top-level properties when their updates should be independent.
+Removing a node changes its membership only. It hides incident edges, including
+edges added concurrently. Re-adding the same ID restores retained properties and
+still-live edges. Removing an edge while an endpoint is hidden prevents that edge
+from returning when the endpoint returns.
 
-LWW picks a deterministic value; it does not reconcile conflicting factual claims. For example, create separate observation nodes `observation:camera:17` and `observation:person:42`, each linked to an asset and its evidence. The graph then retains both observations without introducing a custom conflict-policy framework.
+An ID always identifies the same entity. A replacement item or independent assertion
+needs a new ID. Property updates do not change membership.
+
+Outgoing queries use an ordered source range. The incoming index stores all retained
+edge identities, including hidden edges. Both queries apply the same visibility rule
+as edge lookup. Merge updates the index after validation. Restore rebuilds it.
+The index is excluded from snapshots.
+
+## Writes and no-ops
+
+Adding an already-visible entity makes no change. Removing unknown or already-removed
+membership makes no change. Removing an absent property also makes no change.
+
+Property setters record a fresh write even when the value is equal. This lets a
+writer reassert a value after earlier edits. Missing endpoints or invisible property
+targets return `MissingNode` or `MissingEdge` errors.
+
+## Snapshot format
+
+A snapshot contains complete state, including hidden records and deletion markers.
+It excludes the live `Graph`'s separate writer-ID and clock fields. Register stamps
+retain their writer UUIDs and counters. Restore creates a fresh writer and sets its
+clock from the retained stamps.
+
+Version 1 encodes a JSON object with `version`, sorted `nodes` pairs, and sorted
+`edges` pairs. Each entity includes membership, properties, and stamps. Edge keys
+are structured records. Node keys, property keys, and edge tuples have deterministic order.
+
+Setters and decoding normalize nested JSON object order, including when a dependency
+enables `serde_json/preserve_order`. Encoding borrows stored values without cloning
+the graph. Version 1 remains byte-compatible with the original packaged fixture.
+
+Decoding rejects malformed data, unsupported versions, duplicate entity IDs, invalid
+or zero writer stamps, and edges without endpoint records. Deleted endpoints are valid.
+
+The codec supplies serialization and structural validation. It does not supply
+checksums, signatures, encryption, compression, framing, atomic file replacement,
+or resource quotas. The caller handles those functions. The current release does
+not promise cross-version migration or cryptographic byte canonicalization.
+
+A filtered graph view is not a complete snapshot. Removing hidden records or deletion
+markers from an encoded snapshot changes the merge contract. There is no automatic
+reclamation or peer membership protocol. Each register retains one value per key,
+not a full history of writes.
+
+## Conflicting observations
+
+LWW selects a value by stamp. It does not decide which observation is correct.
+Separate observations such as `observation:camera:17` and `observation:person:42`
+remain separate records when each has its own node ID. Each can link to the same
+asset and to its own evidence. The [repair example](../examples/repair.rs) uses this model.

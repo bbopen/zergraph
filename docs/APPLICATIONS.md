@@ -1,32 +1,81 @@
-# Application ideas that share one small graph
+# Application ideas
 
-These are hypotheses and example patterns, not claims of novelty or validated demand. Model data extraction, planning, ranking, geometry, documents, and transport in the host application. The graph stores relationships and their properties.
+The [cookbook](COOKBOOK.md) contains five runnable examples. The designs below extend
+those patterns to other work. They have not been tested as complete applications.
+Zergraph stores the relationships; an application captures evidence and uses the result.
 
-| Application | Model | Why merge helps |
-|---|---|---|
-| Coding-agent evidence | Claims, code revisions, commands, outputs; `supports`, `contradicts`, `ran-against` | Independent reviewers contribute evidence without sharing one live session. |
-| Worktree handoff | Changes, tests, artifacts, decisions; `depends-on`, `validated-by`, `supersedes` | A handoff can be reconstructed after disconnected work. Git continues to own source history. |
-| Field inspection | Assets, observations, photos, follow-up tasks; `observed-at`, `evidence-for` | Technicians and robots can record relationships before reconnecting. |
-| Dataset lineage | Data slices, scripts, parameters, models, evaluations; `derived-from`, `evaluated-by` | Provenance travels between secure workstations and training machines. |
-| Incident investigation | Services, symptoms, hypotheses, experiments; `depends-on`, `rules-out` | Partitioned investigators retain independently collected evidence. |
-| Specimen tracking | Samples, locations, recordings, determinations, lab results | Field and lab observations can be joined after offline collection. |
-| Archaeological fragments | Fragments, excavation contexts, scans, proposed joins | AI-generated match suggestions and curator corrections remain separately inspectable. |
-| Repair and reuse | Salvaged parts, equipment, dimensions, test evidence; `candidate-for`, `tested-with` | Separate workshops can pool compatibility observations without assuming every suggestion is true. |
-| Scientific anomaly comparison | Anomalies, instruments, calibration versions, environmental events | Agents can suggest links across experiments and retain competing explanations with evidence. |
-| Cross-domain failure analogies | Software failure, physical fault, experiment, proposed mechanism | AI can propose that two failures share a mechanism; the graph preserves the analogy, counterexamples, and tests as reviewable assertions. |
+## Repair knowledge that travels with equipment
 
-## Three useful application patterns
+The repair example preserves two workshops' conflicting verdicts. A useful next step
+is to attach each verdict to a machine revision, test conditions, and evidence.
+A later repairer could find out which substitute parts worked under matching conditions.
 
-**Evidence, rather than a verdict.** Give each claim/observation a separate node ID. Attach its source/model/version as properties, then link supporting and contradicting evidence. Two independent assertions are distinct records, so both survive. Writing both assertions into the same `status` property would intentionally invoke LWW and discard one from the visible value.
+Each test needs a separate assertion node. Photos, measurements, and logs can stay
+in external storage, with their hashes or IDs in the graph. Workshops can exchange
+complete snapshots after offline work. An agent could propose records from notes or
+photos, then help find prior tests.
 
-**Correction with retained identity.** A technician removes an incorrect relationship and adds the corrected one. Another adds unrelated photo evidence. Complete snapshots merge both changes. Removing a node hides its links; using the same ID later revives it. A replacement physical item should get a fresh identity.
+Repair records and compatibility graphs already exist. The
+[Open Repair Data Standard](https://standard.openrepair.org/standard.html) describes
+repair attempts and outcomes. [Eccenca's product-data case](https://eccenca.com/success-story/product-data-management-system)
+describes a graph for finding compatible replacement parts. The opportunity to test
+here is sharing conditional pass and fail evidence between independent workshops.
 
-**Portable lineage.** Store artifact IDs, hashes, or URIs as properties and edges; keep payloads outside the graph. Exchange snapshots through any caller-provided medium, restore with a fresh writer, and inspect the same deterministic relationships.
+A small pilot can measure time to find an applicable prior test and the number of
+failed substitutions repeated. The current example proves that records survive merge;
+it does not measure either workflow result.
 
-AI may make candidate extraction and cross-domain matching economical. Its output still needs explicit identity and provenance; convergence cannot turn an unsupported suggestion into a fact. These workflows are worth trying because the first experiment can be a small fixture and a relationship question rather than a platform.
+## Worktree handoff
 
-## Where the library is a poor fit
+A handoff can connect a code change to its branch, test runs, artifacts, and reviews.
+Each worker adds its own review nodes while Git keeps the source history. On reconnect,
+the graph can show which evidence belongs to which revision.
 
-Single-writer data often needs only a map, `petgraph`, or SQLite. Collaborative prose may fit a document CRDT better. Task exclusivity, robot reservations, safety control, automatic truth selection, and high-rate telemetry have requirements this graph does not provide. Large/high-churn retained graphs may need a different synchronization or storage design.
+Start with the [evidence example](../examples/evidence.rs). Add branch and artifact
+nodes, then link them to the change. Store the exact revision and output hash so the
+next worker can check whether the evidence still applies.
 
-Before adding a feature, demonstrate an application whose relationship question cannot be answered through the existing node/edge/property/snapshot surface, and compare the simpler alternative. A useful experiment measures saved reconciliation work, retained state size, and time to answer the question.
+## Incident investigation
+
+Separate teams can record symptoms, hypotheses, and experiments while disconnected.
+Each observation gets its own ID and source. Edges such as `supports`, `rules-out`,
+and `depends-on` connect the evidence without overwriting a competing hypothesis.
+
+The first useful test is whether a new investigator can find the evidence for an
+open hypothesis after snapshots merge. Root-cause analysis and remediation stay in
+the incident process.
+
+## Field and laboratory provenance
+
+Field teams can link fragments, scans, and excavation contexts. A lab can add samples,
+measurements, and interpretations later. Each interpretation needs its own assertion
+node, whether it came from a person or a model.
+
+The same pattern can connect biodiversity recordings to specimens and lab results.
+Use shared specimen IDs and keep media in the catalog that already stores it. Test
+whether a curator can trace an interpretation back to its source after offline exchange.
+
+## Comparing failures across domains
+
+An agent could suggest that a software incident and a physical fault share a mechanism.
+The graph can link the proposed analogy, its evidence, counterexamples, and a test.
+Each suggestion stays a separate assertion until the application records a decision.
+
+Cross-domain discovery has prior art, including an
+[Analogy Search Engine](https://arxiv.org/abs/1812.06974). [Nanoarguments](https://nlnet.nl/project/Nanoarguments/)
+works on federated claims and evidence. [Lattice Graph](https://latticegraph.com/fit/radical-ai)
+advertises failed-experiment records for scientific agents.
+
+A useful experiment must show that the proposed links help choose better diagnostic
+tests than keyword or embedding search. Zergraph supplies the record and merge rules.
+Retrieval, comparison, and test selection need application code.
+
+## Air-gapped release evidence
+
+A release bundle can carry a graph of components, findings, controls, and reviews.
+Use package IDs, scanner-result hashes, and ticket IDs as properties. Give each
+review its own assertion node and link it to the finding it evaluates.
+
+A reviewer can restore the snapshot and inspect the same relationships without the
+original service. Signing the bundle and authorizing a release remain part of the
+release process.
