@@ -83,8 +83,10 @@ Both loops used the
 mechanical evaluators, tests and Clippy as guards, and a five-minute subprocess limit.
 The record describes two bounded experiments, not a proof of optimal performance.
 
-The core has 868 lines in four Rust modules, including comments and API docs, up
-from 667 lines before sync support. It still has three direct runtime dependencies.
+The measured core has 868 lines in four Rust modules, including comments and API
+docs, up from 667 lines before sync support. The later optional checkpoint-cap API
+brings the release to 884 lines. Later cap timing runs overlapped a CPU-heavy
+workload and are excluded from the comparison; they do not establish cap overhead. It still has three direct runtime dependencies.
 No operation history, background service, transport, or thread pool was added.
 
 ## Reproduce
@@ -94,7 +96,8 @@ cargo bench --locked --bench sync -- --measure
 ```
 
 The timing controls are `N=1024`, `SAMPLES=7`, and `ITERATIONS=100`. Degree is fixed
-at four. For memory measurements, build once and use the executable path Cargo prints:
+at four. `ONLY=checkpoint,checkpoint_capped,checkpoint_rejected` selects the checkpoint
+metrics. A capped capture scans entity counts before copying; rejection copies nothing. For memory measurements, build once and use the executable path Cargo prints:
 
 ```sh
 cargo bench --locked --bench sync --no-run

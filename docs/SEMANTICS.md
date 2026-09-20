@@ -122,6 +122,13 @@ node and edge membership registers and property registers. It is `Clone` and
 to retained register count. It has no wire codec and is meaningful only to the
 application's synchronization bookkeeping.
 
+`Graph::checkpoint_with_limit(max_registers)` counts retained membership and property
+registers, including hidden records and deletion markers. It returns `None` before
+copying if the limit is exceeded. An accepted checkpoint is complete, with the same
+meaning as `checkpoint()`. Zero accepts only an empty graph. This counts registers,
+not bytes; key lengths and allocator overhead still affect RAM use. The application
+limits how many checkpoints and pending candidates it retains.
+
 `Graph::delta_since(&checkpoint)` compares that checkpoint with retained graph state
 and returns a `Delta`. Generation scans all retained state. Matching entity keys use ordered
 iteration; differing keys use tree lookups. Worst-case time is `O(n log n)`. It does not maintain an operation log or make delta generation

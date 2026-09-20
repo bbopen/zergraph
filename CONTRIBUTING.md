@@ -29,6 +29,7 @@ cargo run --locked --example swarm
 cargo run --locked --example lineage
 cargo run --locked --example repair
 cargo run --locked --example work_board
+cargo run --locked --example bounded_sync
 ```
 
 Commit the intended changes, then verify the package from the clean checkout:

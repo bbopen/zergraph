@@ -4,7 +4,7 @@ Zergraph is a Rust property graph that merges changes from independent writers.
 Store entities, labeled relationships, and JSON properties. Each writer edits a
 local graph and exchanges snapshots or incremental deltas with other writers.
 
-The core has 868 lines in four Rust modules and three direct runtime dependencies.
+The core has 884 lines in four Rust modules and three direct runtime dependencies.
 Your application provides storage and transport. Zergraph starts no background tasks.
 
 ## Quick start
@@ -81,7 +81,11 @@ acknowledged = candidate;
 The application sends the bytes and acknowledgments. `changes` lists node IDs and
 edge keys to reread, including edges affected by node removal or revival. Retries
 and reordered delivery are safe. Checkpoints store stamps for every retained
-register, and delta generation scans the graph. See the
+register, and delta generation scans the graph.
+`checkpoint_with_limit(max_registers)` returns `None` before copying if the checkpoint
+would exceed that count. The [bounded-sync recipe](docs/COOKBOOK.md#bound-retained-synchronization-knowledge)
+also caps retained copies, including pending sends. These are configurable counts,
+not byte limits. See the
 [work-board recipe](docs/COOKBOOK.md#sync-a-work-board-after-bootstrap) for a complete example.
 
 ## Documentation
@@ -186,7 +190,7 @@ cargo clippy --all-targets --locked -- -D warnings
 ```
 
 Keep `target/` between edits. CI also checks `serde_json/preserve_order`, runs all
-six examples, and verifies the package. See [Contributing](CONTRIBUTING.md) for the
+seven examples, and verifies the package. See [Contributing](CONTRIBUTING.md) for the
 release commands and [provenance](docs/PROVENANCE.md) for the earlier implementations.
 
 ## Distribution

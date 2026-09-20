@@ -27,4 +27,5 @@ jobs:
       - run: cargo run --locked --example lineage
       - run: cargo run --locked --example repair
       - run: cargo run --locked --example work_board
+      - run: cargo run --locked --example bounded_sync
       - run: cargo package --locked

@@ -14,6 +14,8 @@
 - Add sparse state deltas with exact per-register checkpoints and acknowledged
   retry guidance. Preserve full version-1 snapshot bytes.
 - Add optional merge reports with changed records and affected incident edges.
+- Add an optional register-count cap before checkpoint allocation and a bounded-copy
+  example. Exceeding a cap defers work; it never truncates synchronization metadata.
 - Add a runnable agent work board with independent attempts, evidence, and retry.
 - Add five other runnable examples for evidence, inspection, robot observations, lineage,
   and repair.

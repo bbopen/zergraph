@@ -1,6 +1,7 @@
 //! Sync timings opt in with `--measure`; ordinary test runs only check a tiny fixture.
 //!
-//! Controls: N=1024, SAMPLES=7, ITERATIONS=100. N must be at least five so each
+//! Controls: N=1024, SAMPLES=7, ITERATIONS=100; ONLY filters comma-separated metrics.
+//! N must be at least five so each
 //! node has four distinct outgoing edges. Every node has a 128-byte `payload`
 //! string and an i64 `value`; every edge has an integer `weight`.
 //!
@@ -156,6 +157,9 @@ impl Run {
         mut setup: impl FnMut() -> S,
         mut operation: impl FnMut(&mut S) -> R,
     ) {
+        if env::var("ONLY").is_ok_and(|names| !names.split(',').any(|item| item == name)) {
+            return;
+        }
         let mut timings = Vec::with_capacity(self.samples);
         for sample in 0..self.samples {
             let mut elapsed = Duration::ZERO;
@@ -212,6 +216,18 @@ fn main() {
     };
     let delta_bytes = fixture.delta_bytes.len();
     run.metric("checkpoint", 0, || (), |_| fixture.base.checkpoint());
+    run.metric(
+        "checkpoint_capped",
+        0,
+        || (),
+        |_| fixture.base.checkpoint_with_limit(usize::MAX).unwrap(),
+    );
+    run.metric(
+        "checkpoint_rejected",
+        0,
+        || (),
+        |_| fixture.base.checkpoint_with_limit(0),
+    );
     run.metric(
         "delta_unchanged",
         fixture.empty_delta_bytes,
