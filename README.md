@@ -6,6 +6,8 @@ local graph and exchanges snapshots or incremental deltas with other writers.
 
 The core has 884 lines in four Rust modules and three direct runtime dependencies.
 Your application provides storage and transport. Zergraph starts no background tasks.
+Use it as a dependency or [copy the source into your application](docs/VENDORING.md)
+and maintain it with your own code.
 
 ## Quick start
 
@@ -93,6 +95,7 @@ not byte limits. See the
 | You want to... | Read |
 |---|---|
 | Try the API | [Quick start](#quick-start) |
+| Own and adapt the source | [Vendoring](docs/VENDORING.md) |
 | Build an application | [Cookbook](docs/COOKBOOK.md) and [integration guide](docs/INTEGRATION.md) |
 | Look up merge and deletion rules | [Semantics](docs/SEMANTICS.md) or run `cargo doc --no-deps --open` |
 | Assess a design | [Alternatives](docs/ALTERNATIVES.md), [deployment](docs/DEPLOYMENT.md), and [application ideas](docs/APPLICATIONS.md) |

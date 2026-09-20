@@ -3,6 +3,7 @@
 ## 0.1.0 private release candidate
 
 - Replace the original module skeleton with a property graph library.
+- Document local-crate and module-copy integration for host-maintained source.
 - Add labeled edge keys, deterministic views, independent LWW membership and
   properties, and explicit deletion and revival rules.
 - Give each new, forked, and restored graph a fresh writer identity.

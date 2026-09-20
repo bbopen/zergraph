@@ -3,6 +3,8 @@
 Read README.md, docs/SEMANTICS.md, and CONTRIBUTING.md before editing.
 
 - Keep the core synchronous. The application owns storage and transport.
+- Keep policy in host code. Add a core primitive when the host cannot implement it
+  cheaply through the public API. Preserve the option to vendor the source as modules.
 - Preserve fresh writer identities, atomic merge rejection, deterministic views,
   deletion and revival rules, and complete snapshots.
 - Use the public API in examples. Keep domain code out of the core.
