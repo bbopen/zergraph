@@ -20,7 +20,8 @@ Copying source does not by itself make the code faster or remove their build cos
 ## Keep a local crate
 
 Copy the reviewed repository into `vendor/zergraph`, excluding `.git` and `target`.
-Retain `src`, `tests`, their fixtures, `Cargo.toml`, `Cargo.lock`, and `LICENSE`.
+Retain `src`, `tests`, their fixtures, `Cargo.toml`, `Cargo.lock`, and the license files
+`LICENSE.md`, `LICENSE-MIT`, and `LICENSE-APACHE`.
 Examples, benchmarks, and docs provide useful checks for later edits.
 
 Add this to your application's manifest:
@@ -41,7 +42,7 @@ cargo test --manifest-path vendor/zergraph/Cargo.toml --doc --locked
 
 1. Copy `src/lib.rs` to your application's `src/zergraph/mod.rs`.
 2. Copy `src/state.rs`, `src/snapshot.rs`, and `src/sync.rs` into `src/zergraph`.
-3. Keep `LICENSE` beside the copied source.
+3. Keep `LICENSE.md`, `LICENSE-MIT`, and `LICENSE-APACHE` beside the copied source.
 4. In the three child modules, change their leading `use crate::` imports to
    `use super::`.
 5. In `mod.rs`, qualify the three local module imports as `self::snapshot`,

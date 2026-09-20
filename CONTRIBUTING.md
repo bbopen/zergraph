@@ -81,5 +81,6 @@ where the reader first encounters them.
 
 ## Distribution
 
-The repository retains its proprietary license and disables registry publication.
+The library is dual-licensed under MIT or Apache-2.0; see [LICENSE.md](LICENSE.md).
+Registry publication remains disabled.
 The [changelog](CHANGELOG.md) lists the candidate's changes.
