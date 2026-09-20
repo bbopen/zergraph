@@ -1,11 +1,34 @@
 # Cookbook
 
-These five examples use the public API. Each merges independent changes, encodes a
-snapshot, restores the graph, and checks the result. Run the commands from the
-repository root.
+These six examples use the public API. The snapshot examples merge independent
+changes, encode complete state, restore the graph, and check the result. The work
+board example also sends a sparse delta after a snapshot bootstrap. Run commands
+from the repository root.
 
-For new application designs, see [Application ideas](APPLICATIONS.md).
-For storage and transport, see [Integrate Zergraph](INTEGRATION.md).
+For new application designs, see [Application ideas](APPLICATIONS.md). For storage
+and transport, see [Integrate Zergraph](INTEGRATION.md).
+
+## Sync a work board after bootstrap
+
+Use this pattern when one application owns a graph, peers first receive its complete
+state, and later receive acknowledged batches of changes.
+
+```sh
+cargo run --locked --example work_board
+```
+
+The example bootstraps a board from a full snapshot. Two independent labs add
+different attempts and evidence for the same candidate, including competing results.
+It keeps the old checkpoint after a simulated dropped send, retries the same delta,
+then promotes the checkpoint only after an application acknowledgement. A duplicate
+delivery returns an empty change report.
+
+A checkpoint is valid only for the peer that has acknowledged the corresponding
+state. If that peer is restored, replaced, or loses its graph state, send a complete
+snapshot and establish a new checkpoint. Keep at most one unacknowledged batch for
+a peer unless the application defines a fuller acknowledgement protocol.
+
+[Source: work_board.rs](../examples/work_board.rs)
 
 ## Keep test evidence current
 

@@ -50,7 +50,7 @@ Setters and decoding normalize JSON object order. Encoding borrows stored values
 without cloning the graph. The version-1 format remains compatible with the
 original packaged snapshot fixture.
 
-The core grew from 595 to 667 source lines, including documentation, across three
+At the optimized revision above, the core grew from 595 to 667 source lines, including documentation, across three
 modules. It has three direct runtime dependencies. Check the current counts with:
 
 ```sh
@@ -74,9 +74,9 @@ snapshots or timing batches. Peak resident set size, or RSS, rose from 61.0 MiB 
 72.8 MiB, about 19%. RSS includes process and allocator overhead. It is not an exact
 measurement of live graph memory.
 
-The primary fixture's snapshot remains 1,619,049 bytes. Synchronization still sends
-complete state. These optimizations do not reduce snapshot bandwidth or reclaim
-records after deletion.
+The primary fixture's snapshot remains 1,619,049 bytes. That revision exchanged
+complete state. The later incremental-sync work is measured separately in
+[Sync performance](SYNC_PERFORMANCE.md). Neither change reclaims deleted records.
 
 ## Build times
 

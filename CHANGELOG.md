@@ -11,7 +11,11 @@
   changed records after complete validation.
 - Encode snapshots from borrowed state and normalize JSON object order at input.
 - Add tests for merge laws, transport, malformed snapshots, adjacency, and lifecycle.
-- Add five runnable examples for evidence, inspection, robot observations, lineage,
+- Add sparse state deltas with exact per-register checkpoints and acknowledged
+  retry guidance. Preserve full version-1 snapshot bytes.
+- Add optional merge reports with changed records and affected incident edges.
+- Add a runnable agent work board with independent attempts, evidence, and retry.
+- Add five other runnable examples for evidence, inspection, robot observations, lineage,
   and repair.
 - Add benchmark results, hardware proposals, a cluster design example, and comparisons
   with libraries in other languages.

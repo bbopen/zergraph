@@ -28,6 +28,7 @@ cargo run --locked --example field_inspection
 cargo run --locked --example swarm
 cargo run --locked --example lineage
 cargo run --locked --example repair
+cargo run --locked --example work_board
 ```
 
 Commit the intended changes, then verify the package from the clean checkout:
@@ -51,7 +52,8 @@ public contract changes.
 
 ## Measure performance
 
-Run `cargo bench --locked --bench perf -- --measure` in a release build. Use the same
+Run `cargo bench --locked --bench perf -- --measure` or
+`cargo bench --locked --bench sync -- --measure` in a release build. Use the same
 fixture for the baseline and candidate. Repeat the runs and retain the raw samples.
 Report memory costs and slower operations as well as faster ones. Record the machine,
 toolchain, graph shape, properties, and snapshot size.
